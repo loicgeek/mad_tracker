@@ -369,16 +369,14 @@
         </div>
         <div class="flex items-center gap-3">
             <a href="{{ route('dossiers.index') }}" class="btn-ghost">Annuler</a>
-            @if($currentStep < 5)
-                <button wire:click="nextStep" class="btn-primary">Suivant →</button>
-            @else
+           
                 <button wire:click="save" class="btn-primary btn-lg">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                     </svg>
                     {{ $isEdit ? 'Enregistrer les modifications' : 'Créer le dossier' }}
                 </button>
-            @endif
+
         </div>
     </div>
 

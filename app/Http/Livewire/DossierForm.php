@@ -87,7 +87,7 @@ class DossierForm extends Component
         return [
             'user_id'           => 'required|exists:users,id',
             'client_id'         => 'required|exists:clients,id',
-            'fournisseur_id'    => 'required|exists:fournisseurs,id',
+            'fournisseur_id'    => 'nullable|exists:fournisseurs,id',
             'incoterm'          => 'required|in:FCA_USINE,FCA_TRANSITAIRE,CPT,CFR,EXW,AUTRES',
             'mad_date_prevue'   => 'nullable|date',
             'mad_date_reelle'   => 'nullable|date',
