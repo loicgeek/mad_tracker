@@ -150,28 +150,52 @@ class DossiersImport implements ToCollection, WithHeadingRow, SkipsOnError, With
 
         // ── Reference ────────────────────────────────────────────────
         $reference = trim((string) ($this->col($row, 'reference') ?? ''));
-        if ($reference === '') {
-            $reference = Dossier::genererReference();
-        }
 
         // ── Dossier upsert ───────────────────────────────────────────
-        $dossier = Dossier::updateOrCreate(
-            ['reference' => $reference],
-            [
-                'user_id'             => $userId,
-                'client_id'           => $clientId,
-                'fournisseur_id'      => $fournisseurId,
-                'numero_facture'      => $this->str($this->col($row, 'numero_facture', 'n_facture')),
-                'reference_affaire'   => $this->str($this->col($row, 'reference_affaire', 'affaire')),
-                'pays_destination'    => $this->str($this->col($row, 'pays_destination', 'pays')),
-                'incoterm'            => $incoterm,
-                'incoterm_lieu'       => $this->str($this->col($row, 'incoterm_lieu', 'lieu_incoterm')),
-                'transitaire_nom'     => $this->str($this->col($row, 'transitaire_nom', 'transitaire')),
-                'transitaire_contact' => $this->str($this->col($row, 'transitaire_contact')),
-                'poids'               => $this->decimal($this->col($row, 'poids', 'poids_kg')),
-                'cout_transitaire'    => $this->decimal($this->col($row, 'cout_transitaire')),
-            ]
-        );
+        /*
+         * Three cases:
+         *   1. Reference provided AND exists (including soft-deleted) → update / restore
+         *   2. Reference provided but NOT found → create with that exact reference
+         *   3. No reference in the row → generate a new one and create
+         *
+         * We must use withTrashed() because updateOrCreate() ignores soft-deleted
+         * rows, which would trigger a unique-constraint violation on `reference`.
+         */
+        $dossierData = [
+            'user_id'             => $userId,
+            'client_id'           => $clientId,
+            'fournisseur_id'      => $fournisseurId,
+            'numero_facture'      => $this->str($this->col($row, 'numero_facture', 'n_facture')),
+            'reference_affaire'   => $this->str($this->col($row, 'reference_affaire', 'affaire')),
+            'pays_destination'    => $this->str($this->col($row, 'pays_destination', 'pays')),
+            'incoterm'            => $incoterm,
+            'incoterm_lieu'       => $this->str($this->col($row, 'incoterm_lieu', 'lieu_incoterm')),
+            'transitaire_nom'     => $this->str($this->col($row, 'transitaire_nom', 'transitaire')),
+            'transitaire_contact' => $this->str($this->col($row, 'transitaire_contact')),
+            'poids'               => $this->decimal($this->col($row, 'poids', 'poids_kg')),
+            'cout_transitaire'    => $this->decimal($this->col($row, 'cout_transitaire')),
+        ];
+
+        if ($reference !== '') {
+            // Look up including soft-deleted rows to avoid unique-constraint clash
+            $dossier = Dossier::withTrashed()->where('reference', $reference)->first();
+
+            if ($dossier) {
+                // Restore if soft-deleted, then update all fields
+                if ($dossier->trashed()) {
+                    $dossier->restore();
+                }
+                $dossier->update($dossierData);
+            } else {
+                // Reference supplied but not in DB → create with that reference
+                $dossier = Dossier::create(array_merge($dossierData, ['reference' => $reference]));
+            }
+        } else {
+            // No reference → always a new dossier
+            $dossier = Dossier::create(array_merge($dossierData, [
+                'reference' => Dossier::genererReference(),
+            ]));
+        }
 
         // ── Étape 1 — MAD Fournisseur ────────────────────────────────
         $dossier->etapeMadFournisseur()->updateOrCreate(
