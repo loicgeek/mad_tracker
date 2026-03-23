@@ -31,6 +31,31 @@
     </div>
     @endif
 
+    {{-- ── Legend — 4 étapes ───────────────────────────────────── --}}
+    <div class="flex items-center gap-4 text-xs text-slate-500 flex-wrap">
+        <span class="font-medium text-slate-600">Étapes :</span>
+        @php
+            $legend = [
+                ['label' => 'MAD Fourn.',       'bg' => 'bg-blue-500',   'ring' => 'ring-blue-200'],
+                ['label' => 'Facturation',       'bg' => 'bg-purple-500', 'ring' => 'ring-purple-200'],
+                ['label' => 'Transitaire',       'bg' => 'bg-yellow-500', 'ring' => 'ring-yellow-200'],
+                ['label' => 'Livraison/Clôture', 'bg' => 'bg-teal-500',   'ring' => 'ring-teal-200'],
+            ];
+        @endphp
+        @foreach($legend as $l)
+            <span class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full {{ $l['bg'] }} ring-2 {{ $l['ring'] }}"></span>
+                {{ $l['label'] }}
+            </span>
+        @endforeach
+        <span class="flex items-center gap-1.5 ml-2 pl-2 border-l border-slate-200">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Complète
+        </span>
+        <span class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-slate-200"></span> Non démarrée
+        </span>
+    </div>
+
     {{-- ── Filters ──────────────────────────────────────────────── --}}
     <div class="card">
         <div class="card-body">
@@ -86,13 +111,47 @@
                     </th>
                     <th>MAD Prévue</th>
                     <th>MAD Réelle</th>
-                    <th>Statut</th>
+                    <th>Statut & Étapes</th>
                     <th>Alertes</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($dossiers as $d)
+                @php
+                    /*
+                     * ── Dot 4 : composite Livraison + Clôture ────────────────
+                     * complete   → etapeCloture->complete (= statut 'finalise')
+                     * teal       → clôture en cours
+                     * amber      → livraison en cours, clôture pas encore démarrée
+                     * slate      → ni l'un ni l'autre
+                     */
+                    $dot4Complete     = (bool) $d->etapeCloture?->complete;
+                    $dot4HasCloture   = $d->etapeCloture   && !$dot4Complete;
+                    $dot4HasLivraison = $d->etapeLivraison && !$dot4HasCloture && !$dot4Complete;
+
+                    if ($dot4Complete) {
+                        $dot4Class = 'bg-emerald-500';
+                        $dot4Title = 'Livraison & Clôture ✓';
+                    } elseif ($dot4HasCloture) {
+                        $dot4Class = 'bg-teal-500 ring-2 ring-teal-200';
+                        $dot4Title = 'Clôture (en cours)';
+                    } elseif ($dot4HasLivraison) {
+                        $dot4Class = 'bg-amber-500 ring-2 ring-amber-200';
+                        $dot4Title = 'Livraison (en cours)';
+                    } else {
+                        $dot4Class = 'bg-slate-200';
+                        $dot4Title = 'Livraison & Clôture (non démarré)';
+                    }
+
+                    // Dots 1–3: standard resolution
+                    $dots = [
+                        ['label' => 'MAD Fournisseur', 'activeClass' => 'bg-blue-500 ring-2 ring-blue-200',   'etape' => $d->etapeMadFournisseur],
+                        ['label' => 'Facturation',      'activeClass' => 'bg-purple-500 ring-2 ring-purple-200','etape' => $d->etapeFacturation],
+                        ['label' => 'Transitaire',      'activeClass' => 'bg-yellow-500 ring-2 ring-yellow-200','etape' => $d->etapeTransitaire],
+                    ];
+                @endphp
+
                 <tr @class(['bg-red-50/40' => $d->has_alerte])>
                     <td>
                         <span class="font-mono text-xs font-semibold text-brand-700">{{ $d->reference }}</span>
@@ -117,11 +176,7 @@
                             {{ $d->etapeMadFournisseur->date_mad_reelle->format('d/m/Y') }}
                             @php $ecart = $d->etapeMadFournisseur->ecart_jours; @endphp
                             @if(!is_null($ecart))
-                                <span @class([
-                                    'ml-1 text-xs font-medium',
-                                    'text-red-600' => $ecart > 0,
-                                    'text-emerald-600' => $ecart <= 0,
-                                ])>
+                                <span @class(['ml-1 text-xs font-medium', 'text-red-600' => $ecart > 0, 'text-emerald-600' => $ecart <= 0])>
                                     {{ $ecart > 0 ? "+{$ecart}j" : "{$ecart}j" }}
                                 </span>
                             @endif
@@ -129,21 +184,18 @@
                             <span class="text-slate-400">—</span>
                         @endif
                     </td>
+
+                    {{-- ── Statut badge (model accessor) + 4-dot track ─ --}}
                     <td>
-                        @php
-                            $colorMap = [
-                                'gray'   => 'badge-gray',
-                                'blue'   => 'badge-blue',
-                                'purple' => 'badge-purple',
-                                'yellow' => 'badge-yellow',
-                                'green'  => 'badge-green',
-                                'teal'   => 'badge-green',
-                            ];
-                        @endphp
-                        <span class="badge {{ $colorMap[$d->statut_color] ?? 'badge-gray' }}">
+                        {{-- $d->statut_badge comes from Dossier::getStatutBadgeAttribute() --}}
+                        <span class="badge {{ $d->statut_badge }} mb-1.5 block w-fit">
                             {{ $d->statut_label }}
                         </span>
+
+                        {{-- 4-dot progress track --}}
+                       
                     </td>
+
                     <td>
                         @if($d->has_alerte)
                             <span class="text-amber-500" title="Alertes actives">⚠️</span>
@@ -193,12 +245,8 @@
 
     {{-- Pagination --}}
     <div class="flex items-center justify-between">
-        <p class="text-sm text-slate-500">
-            {{ $dossiers->total() }} dossier(s)
-        </p>
-        <div class="pagination-wrapper">
-            {{ $dossiers->links() }}
-        </div>
+        <p class="text-sm text-slate-500">{{ $dossiers->total() }} dossier(s)</p>
+        <div class="pagination-wrapper">{{ $dossiers->links() }}</div>
     </div>
 
 </div>

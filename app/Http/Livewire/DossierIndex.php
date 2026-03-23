@@ -14,15 +14,15 @@ class DossierIndex extends Component
     use WithPagination;
 
     // Filters
-    public string $search        = '';
-    public string $filterStatut  = '';
-    public string $filterClient  = '';
+    public string $search            = '';
+    public string $filterStatut      = '';
+    public string $filterClient      = '';
     public string $filterResponsable = '';
-    public string $filterIncoterm = '';
-    public string $filterAlertes = '';
-    public string $sortField     = 'created_at';
-    public string $sortDirection = 'desc';
-    public int    $perPage       = 25;
+    public string $filterIncoterm    = '';
+    public string $filterAlertes     = '';
+    public string $sortField         = 'created_at';
+    public string $sortDirection     = 'desc';
+    public int    $perPage           = 25;
 
     protected $queryString = [
         'search'            => ['except' => ''],
@@ -35,9 +35,9 @@ class DossierIndex extends Component
         'sortDirection'     => ['except' => 'desc'],
     ];
 
-    public function updatingSearch(): void    { $this->resetPage(); }
-    public function updatingFilterStatut(): void { $this->resetPage(); }
-    public function updatingFilterClient(): void { $this->resetPage(); }
+    public function updatingSearch(): void       { $this->resetPage(); }
+    public function updatingFilterStatut(): void  { $this->resetPage(); }
+    public function updatingFilterClient(): void  { $this->resetPage(); }
 
     public function sortBy(string $field): void
     {
@@ -55,7 +55,16 @@ class DossierIndex extends Component
     public function render()
     {
         $query = Dossier::query()
-            ->with(['client', 'user', 'fournisseur', 'etapeMadFournisseur', 'etapeCloture'])
+            ->with([
+                'client',
+                'user',
+                'fournisseur',
+                'etapeMadFournisseur',
+                'etapeFacturation',
+                'etapeTransitaire',
+                'etapeLivraison',
+                'etapeCloture',
+            ])
             ->when($this->search, fn($q) => $q->where(function ($q) {
                 $q->where('reference', 'like', "%{$this->search}%")
                   ->orWhere('reference_affaire', 'like', "%{$this->search}%")
@@ -63,18 +72,18 @@ class DossierIndex extends Component
                   ->orWhereHas('client', fn($q) => $q->where('nom', 'like', "%{$this->search}%"))
                   ->orWhereHas('fournisseur', fn($q) => $q->where('nom', 'like', "%{$this->search}%"));
             }))
-            ->when($this->filterStatut, fn($q) => $q->where('statut', $this->filterStatut))
-            ->when($this->filterClient, fn($q) => $q->where('client_id', $this->filterClient))
+            ->when($this->filterStatut,      fn($q) => $q->where('statut', $this->filterStatut))
+            ->when($this->filterClient,      fn($q) => $q->where('client_id', $this->filterClient))
             ->when($this->filterResponsable, fn($q) => $q->where('user_id', $this->filterResponsable))
-            ->when($this->filterIncoterm, fn($q) => $q->where('incoterm', $this->filterIncoterm))
+            ->when($this->filterIncoterm,    fn($q) => $q->where('incoterm', $this->filterIncoterm))
             ->when($this->filterAlertes === 'oui', fn($q) => $q->withAlertes())
             ->orderBy($this->sortField, $this->sortDirection);
 
         return view('livewire.dossier-index', [
-            'dossiers'    => $query->paginate($this->perPage),
-            'clients'     => Client::orderBy('nom')->get(),
-            'responsables'=> User::orderBy('nom')->get(),
-            'totalAlertes'=> Dossier::withAlertes()->count(),
+            'dossiers'     => $query->paginate($this->perPage),
+            'clients'      => Client::orderBy('nom')->get(),
+            'responsables' => User::orderBy('nom')->get(),
+            'totalAlertes' => Dossier::withAlertes()->count(),
         ])->layout('layouts.app', ['title' => 'Dossiers']);
     }
 }
