@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\DB;
 
 class Dossier extends Model
 {
@@ -246,18 +247,20 @@ class Dossier extends Model
 
     // ── Static Helpers ─────────────────────────────────────────────
 
-    public static function genererReference(): string
-    {
+   public static function genererReference(): string
+{
+    return DB::transaction(function () {
         $year = now()->year;
-        $last = static::withTrashed()
-            ->where('reference', 'like', "DOS-{$year}-%")
-            ->orderByDesc('id')
-            ->first();
+        $prefix = "DOS-{$year}-";
 
-        $seq = $last
-            ? (int) substr($last->reference, strrpos($last->reference, '-') + 1) + 1
-            : 1;
+        $maxSeq = DB::table((new static())->getTable())
+            ->where('reference', 'like', "{$prefix}%")
+            ->lockForUpdate()
+            ->max(DB::raw("CAST(SUBSTRING_INDEX(reference, '-', -1) AS UNSIGNED)"));
+
+        $seq = $maxSeq ? $maxSeq + 1 : 1;
 
         return sprintf('DOS-%d-%04d', $year, $seq);
-    }
+    });
+}
 }
