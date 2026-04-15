@@ -171,4 +171,138 @@
         </div>
 
     </div>
+
+    {{-- ── Performance par transporteur ──────────────────────────── --}}
+    @if(count($parTransporteur) > 0)
+    <div class="card">
+        <div class="card-header">
+            <h3 class="font-semibold text-slate-800">Performance par transporteur</h3>
+        </div>
+        <div class="table-wrapper rounded-none rounded-b-xl border-0">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Transporteur</th>
+                        <th class="text-right">Dossiers</th>
+                        <th class="text-right">% à temps</th>
+                        <th class="text-right">Coût prévu moy.</th>
+                        <th class="text-right">Coût réel moy.</th>
+                        <th class="text-right">Écart %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($parTransporteur as $r)
+                    <tr>
+                        <td class="font-medium text-slate-800">{{ $r->nom }}</td>
+                        <td class="text-right">{{ $r->total }}</td>
+                        <td class="text-right">
+                            @if($r->pct_a_temps !== null)
+                                <span class="font-semibold {{ $r->pct_a_temps >= 80 ? 'text-emerald-600' : 'text-red-500' }}">
+                                    {{ $r->pct_a_temps }}%
+                                </span>
+                            @else
+                                <span class="text-slate-400">—</span>
+                            @endif
+                        </td>
+                        <td class="text-right text-xs">{{ $r->moy_cout_prevu ? number_format($r->moy_cout_prevu, 0).' €' : '—' }}</td>
+                        <td class="text-right text-xs">{{ $r->moy_cout_reel ? number_format($r->moy_cout_reel, 0).' €' : '—' }}</td>
+                        <td class="text-right">
+                            @if($r->ecart_pct !== null)
+                                <span class="font-semibold {{ $r->ecart_pct > 0 ? 'text-red-500' : 'text-emerald-600' }}">
+                                    {{ $r->ecart_pct > 0 ? '+' : '' }}{{ $r->ecart_pct }}%
+                                </span>
+                            @else
+                                <span class="text-slate-400">—</span>
+                            @endif
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
+
+    {{-- ── Standard vs Projet + Délai par Incoterm ────────────────── --}}
+    <div class="grid grid-cols-2 gap-6">
+
+        {{-- Par type de commande --}}
+        @if(count($parType) > 0)
+        <div class="card">
+            <div class="card-header">
+                <h3 class="font-semibold text-slate-800">Standard vs Projet</h3>
+            </div>
+            <div class="table-wrapper rounded-none rounded-b-xl border-0">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th class="text-right">Total</th>
+                            <th class="text-right">Finalisés</th>
+                            <th class="text-right">Taux</th>
+                            <th class="text-right">Délai moy.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($parType as $r)
+                        <tr>
+                            <td>
+                                <span class="badge {{ $r->type_commande === 'projet' ? 'badge-purple' : 'badge-gray' }} capitalize">
+                                    {{ $r->type_commande }}
+                                </span>
+                            </td>
+                            <td class="text-right">{{ $r->total }}</td>
+                            <td class="text-right text-emerald-600 font-medium">{{ $r->finalises }}</td>
+                            <td class="text-right">{{ $r->taux }}%</td>
+                            <td class="text-right text-xs">
+                                @if($r->delai_moyen !== null)
+                                    <span class="{{ $r->delai_moyen > 0 ? 'text-red-500' : 'text-emerald-600' }} font-medium">
+                                        {{ $r->delai_moyen > 0 ? '+' : '' }}{{ $r->delai_moyen }}j
+                                    </span>
+                                @else —
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        @endif
+
+        {{-- Délai moyen par incoterm --}}
+        @if(count($delaiParIncoterm) > 0)
+        <div class="card">
+            <div class="card-header">
+                <h3 class="font-semibold text-slate-800">Délai moyen de livraison par incoterm</h3>
+            </div>
+            <div class="table-wrapper rounded-none rounded-b-xl border-0">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Incoterm</th>
+                            <th class="text-right">Dossiers livrés</th>
+                            <th class="text-right">Délai moyen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($delaiParIncoterm as $r)
+                        <tr>
+                            <td class="font-medium">{{ $r->incoterm }}</td>
+                            <td class="text-right">{{ $r->total }}</td>
+                            <td class="text-right">
+                                <span class="{{ $r->delai_moyen > 0 ? 'text-red-500' : 'text-emerald-600' }} font-semibold">
+                                    {{ $r->delai_moyen > 0 ? '+' : '' }}{{ $r->delai_moyen }}j
+                                </span>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        @endif
+
+    </div>
+
 </div>

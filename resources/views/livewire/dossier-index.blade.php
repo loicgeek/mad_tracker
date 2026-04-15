@@ -59,7 +59,7 @@
     {{-- ── Filters ──────────────────────────────────────────────── --}}
     <div class="card">
         <div class="card-body">
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
                 <div class="md:col-span-2">
                     <input wire:model.live.debounce.300ms="search" type="search"
                            class="form-input" placeholder="Référence, affaire, client, fournisseur…">
@@ -79,6 +79,11 @@
                     @foreach($clients as $c)
                         <option value="{{ $c->id }}">{{ $c->nom }}</option>
                     @endforeach
+                </select>
+                <select wire:model.live="filterType" class="form-select">
+                    <option value="">Tous types</option>
+                    <option value="standard">Standard</option>
+                    <option value="projet">Projet</option>
                 </select>
                 <select wire:model.live="filterAlertes" class="form-select">
                     <option value="">Toutes</option>
@@ -102,6 +107,7 @@
                     <th>Responsable</th>
                     <th>Client</th>
                     <th>Fournisseur</th>
+                    <th>Type</th>
                     <th>Incoterm</th>
                     <th wire:click="sortBy('created_at')" class="cursor-pointer select-none">
                         Date création
@@ -165,6 +171,15 @@
                     <td class="font-medium">{{ $d->client->nom ?? '-' }}</td>
                     <td class="text-slate-600">{{ $d->fournisseur->nom ?? '-' }}</td>
                     <td>
+                        @if($d->type_commande === 'projet')
+                            <span class="badge badge-purple">Projet</span>
+                        @elseif($d->type_commande === 'standard')
+                            <span class="badge badge-gray">Standard</span>
+                        @else
+                            <span class="text-slate-300 text-xs">—</span>
+                        @endif
+                    </td>
+                    <td>
                         <span class="text-xs text-slate-600">{{ $d->incoterm_label }}</span>
                     </td>
                     <td class="text-xs text-slate-500">{{ $d->created_at->format('d/m/Y') }}</td>
@@ -188,7 +203,8 @@
                     {{-- ── Statut badge (model accessor) + 4-dot track ─ --}}
                     <td>
                         {{-- $d->statut_badge comes from Dossier::getStatutBadgeAttribute() --}}
-                        <span class="badge {{ $d->statut_badge }} mb-1.5 block w-fit">
+                        <span class="badge {{ $d->statut_badge }} mb-1.5 block w-fit cursor-help"
+                              title="{{ $d->action_suggeree }}">
                             {{ $d->statut_label }}
                         </span>
 

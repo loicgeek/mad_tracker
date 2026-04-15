@@ -4,11 +4,7 @@
     <div class="flex items-center justify-between">
         <div>
             <h2 class="text-xl font-semibold text-slate-900">{{ $title }}</h2>
-            @if($isEdit)
-                <p class="text-sm font-mono text-slate-500 mt-0.5">{{ $dossier->reference }}</p>
-            @else
-                <p class="text-sm text-slate-500 mt-0.5">Remplissez les informations étape par étape</p>
-            @endif
+            <p class="text-sm text-slate-500 mt-0.5">Remplissez les informations étape par étape</p>
         </div>
         <a href="{{ route('dossiers.index') }}" class="btn-secondary">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -197,6 +193,23 @@
             <p class="text-xs text-slate-500 mt-0.5">Parties prenantes et paramètres du dossier.</p>
         </div>
         <div class="card-body space-y-5">
+            {{-- Référence EPS --}}
+            <div class="grid grid-cols-2 gap-5">
+                <div class="form-group">
+                    <label class="form-label">Référence EPS <span class="text-red-500">*</span></label>
+                    <input wire:model="reference" type="text" class="form-input font-mono"
+                           placeholder="Ex: EPS-2024-001">
+                    @error('reference') <p class="form-error">{{ $message }}</p> @enderror
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Type de commande</label>
+                    <select wire:model="type_commande" class="form-select">
+                        <option value="">— Sélectionner —</option>
+                        <option value="standard">Standard</option>
+                        <option value="projet">Projet</option>
+                    </select>
+                </div>
+            </div>
             <div class="grid grid-cols-2 gap-5">
                 <div class="form-group">
                     <label class="form-label">Responsable <span class="text-red-500">*</span></label>
@@ -334,23 +347,31 @@
             <hr class="border-slate-100">
 
             <div>
-                <p class="text-sm font-medium text-slate-700 mb-3">Transitaire client</p>
+                <p class="text-sm font-medium text-slate-700 mb-3">Transporteur / Transitaire</p>
                 <div class="grid grid-cols-2 gap-5">
-                    <div class="form-group">
-                        <label class="form-label">Nom transitaire</label>
-                        <input wire:model="transitaire_nom" type="text" class="form-input" placeholder="Bolloré, DHL…">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Contact transitaire</label>
-                        <input wire:model="transitaire_contact" type="text" class="form-input">
+                    <div class="form-group col-span-2">
+                        <label class="form-label">Transporteur</label>
+                        <select wire:model="transporteur_id" class="form-select">
+                            <option value="">— Aucun —</option>
+                            @foreach($transporteurs as $t)
+                                <option value="{{ $t->id }}">{{ $t->nom }}{{ $t->pays ? ' ('.$t->pays.')' : '' }}</option>
+                            @endforeach
+                        </select>
+                        @error('transporteur_id') <p class="form-error">{{ $message }}</p> @enderror
                     </div>
                     <div class="form-group">
                         <label class="form-label">Poids (kg)</label>
                         <input wire:model="poids" type="number" step="0.1" class="form-input">
                     </div>
+                    <div class="form-group"></div>
                     <div class="form-group">
-                        <label class="form-label">Coût transitaire (€)</label>
-                        <input wire:model="cout_transitaire" type="number" step="0.01" class="form-input">
+                        <label class="form-label">Coût prévu (€)</label>
+                        <input wire:model="cout_transitaire" type="number" step="0.01" class="form-input" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Coût réel (€)</label>
+                        <input wire:model="cout_reel" type="number" step="0.01" class="form-input" placeholder="0.00">
+                        @error('cout_reel') <p class="form-error">{{ $message }}</p> @enderror
                     </div>
                 </div>
             </div>
@@ -489,6 +510,13 @@
                         <label class="form-label">N° AWB / BL</label>
                         <input wire:model="liv_awb" type="text" class="form-input">
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Motif de retard (si applicable)</label>
+                    <input wire:model="liv_motif_retard" type="text" class="form-input"
+                           placeholder="Ex : congé usine, retard douane, problème transport…">
+                    @error('liv_motif_retard') <p class="form-error">{{ $message }}</p> @enderror
                 </div>
 
                 <div class="form-group">

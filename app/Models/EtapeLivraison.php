@@ -8,7 +8,7 @@ class EtapeLivraison extends Model
     protected $table = 'etape_livraisons';
     protected $fillable = [
         'dossier_id', 'date_livraison_prevue', 'date_livraison_reelle',
-        'mode_transport', 'awb_bl_numero', 'applicable', 'observations', 'complete',
+        'mode_transport', 'awb_bl_numero', 'motif_retard', 'applicable', 'observations', 'complete',
     ];
     protected $casts = [
         'date_livraison_prevue'  => 'date',

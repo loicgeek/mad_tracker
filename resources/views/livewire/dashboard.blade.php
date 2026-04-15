@@ -71,7 +71,37 @@
         </div>
     </div>
 
-    {{-- ── Charts + Alertes ────────────────────────────────────── --}}
+    {{-- ── KPI Livraisons & Coûts ───────────────────────────────── --}}
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div class="card p-4 text-center">
+            <p class="text-xs text-slate-500 mb-1">Livraisons à temps</p>
+            <p class="text-2xl font-bold text-emerald-600">{{ $stats['taux_livraison_temps'] }}<span class="text-sm ml-0.5">%</span></p>
+        </div>
+        <div class="card p-4 text-center">
+            <p class="text-xs text-slate-500 mb-1">Taux de retard</p>
+            <p class="text-2xl font-bold text-red-500">{{ $stats['taux_retard'] }}<span class="text-sm ml-0.5">%</span></p>
+        </div>
+        <div class="card p-4 text-center">
+            <p class="text-xs text-slate-500 mb-1">Délai moyen livraison</p>
+            <p class="text-2xl font-bold {{ $stats['delai_moyen_livraison'] > 0 ? 'text-red-500' : 'text-emerald-600' }}">
+                {{ $stats['delai_moyen_livraison'] }}<span class="text-sm text-slate-400 ml-1">j</span>
+            </p>
+        </div>
+        <div class="card p-4 text-center">
+            <p class="text-xs text-slate-500 mb-1">Écart coût total</p>
+            <p class="text-2xl font-bold {{ $stats['ecart_cout_total'] > 0 ? 'text-red-500' : ($stats['ecart_cout_total'] < 0 ? 'text-emerald-600' : 'text-slate-400') }}">
+                {{ $stats['ecart_cout_total'] > 0 ? '+' : '' }}{{ number_format($stats['ecart_cout_total'], 0) }}<span class="text-sm ml-0.5">€</span>
+            </p>
+        </div>
+        <div class="card p-4 text-center">
+            <p class="text-xs text-slate-500 mb-1">Écart coût moyen</p>
+            <p class="text-2xl font-bold {{ $stats['ecart_cout_pct'] > 0 ? 'text-red-500' : ($stats['ecart_cout_pct'] < 0 ? 'text-emerald-600' : 'text-slate-400') }}">
+                {{ $stats['ecart_cout_pct'] > 0 ? '+' : '' }}{{ $stats['ecart_cout_pct'] }}<span class="text-sm ml-0.5">%</span>
+            </p>
+        </div>
+    </div>
+
+    {{-- ── Charts ───────────────────────────────────────────────── --}}
     <div class="grid grid-cols-2 gap-6">
 
         {{-- Chart statuts --}}
@@ -95,6 +125,18 @@
         </div>
 
     </div>
+
+    {{-- Chart coûts prévu vs réel --}}
+    @if(count($chartCouts['labels']) > 0)
+    <div class="card">
+        <div class="card-header">
+            <h3 class="font-semibold text-slate-800">Coût transport prévu vs réel (moy. mensuelle)</h3>
+        </div>
+        <div class="card-body">
+            <div id="chart-couts" style="min-height:260px"></div>
+        </div>
+    </div>
+    @endif
 
     {{-- ── Alertes actives ─────────────────────────────────────── --}}
     @if(count($alertes) > 0)
@@ -172,6 +214,26 @@ document.addEventListener('DOMContentLoaded', function () {
         dataLabels: { enabled: false },
         grid: { borderColor: '#f1f5f9' },
     }).render();
+
+    // Coûts chart
+    const coutsEl = document.getElementById('chart-couts');
+    if (coutsEl) {
+        const couts = @json($chartCouts);
+        new ApexCharts(coutsEl, {
+            chart: { type: 'bar', height: 260, fontFamily: 'Instrument Sans, sans-serif', toolbar: { show: false } },
+            series: [
+                { name: 'Coût prévu (moy.)', data: couts.prevu },
+                { name: 'Coût réel (moy.)',  data: couts.reel  },
+            ],
+            xaxis: { categories: couts.labels },
+            colors: ['#6366f1', '#f59e0b'],
+            plotOptions: { bar: { columnWidth: '60%', borderRadius: 3 } },
+            dataLabels: { enabled: false },
+            yaxis: { labels: { formatter: v => v.toFixed(0) + ' €' } },
+            legend: { position: 'top' },
+            grid: { borderColor: '#f1f5f9' },
+        }).render();
+    }
 });
 </script>
 @endpush

@@ -17,7 +17,7 @@ class DossierShow extends Component
     public function mount(int $id): void
     {
         $this->dossier = Dossier::with([
-            'client', 'user', 'fournisseur',
+            'client', 'user', 'fournisseur', 'transporteur',
             'etapeMadFournisseur', 'etapeFacturation',
             'etapeTransitaire', 'etapeLivraison', 'etapeCloture',
             'observations.user',

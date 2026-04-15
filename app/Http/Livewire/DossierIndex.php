@@ -20,6 +20,7 @@ class DossierIndex extends Component
     public string $filterResponsable = '';
     public string $filterIncoterm    = '';
     public string $filterAlertes     = '';
+    public string $filterType        = '';
     public string $sortField         = 'created_at';
     public string $sortDirection     = 'desc';
     public int    $perPage           = 25;
@@ -31,6 +32,7 @@ class DossierIndex extends Component
         'filterResponsable' => ['except' => ''],
         'filterIncoterm'    => ['except' => ''],
         'filterAlertes'     => ['except' => ''],
+        'filterType'        => ['except' => ''],
         'sortField'         => ['except' => 'created_at'],
         'sortDirection'     => ['except' => 'desc'],
     ];
@@ -38,6 +40,7 @@ class DossierIndex extends Component
     public function updatingSearch(): void       { $this->resetPage(); }
     public function updatingFilterStatut(): void  { $this->resetPage(); }
     public function updatingFilterClient(): void  { $this->resetPage(); }
+    public function updatingFilterType(): void    { $this->resetPage(); }
 
     public function sortBy(string $field): void
     {
@@ -77,6 +80,7 @@ class DossierIndex extends Component
             ->when($this->filterResponsable, fn($q) => $q->where('user_id', $this->filterResponsable))
             ->when($this->filterIncoterm,    fn($q) => $q->where('incoterm', $this->filterIncoterm))
             ->when($this->filterAlertes === 'oui', fn($q) => $q->withAlertes())
+            ->when($this->filterType, fn($q) => $q->where('type_commande', $this->filterType))
             ->orderBy($this->sortField, $this->sortDirection);
 
         return view('livewire.dossier-index', [

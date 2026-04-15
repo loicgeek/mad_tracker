@@ -12,6 +12,7 @@ use App\Models\EtapeFacturation;
 use App\Models\EtapeTransitaire;
 use App\Models\EtapeLivraison;
 use App\Models\EtapeCloture;
+use App\Models\Transporteur;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -22,19 +23,23 @@ class DossierForm extends Component
     public int $currentStep = 1;
 
     // ── Step 0 : Informations générales ──
+    public string $reference = '';
     public int    $user_id = 0;
     public int    $client_id = 0;
-    public ?int $fournisseur_id = null;
+    public ?int   $fournisseur_id = null;
     public string $numero_facture = '';
     public string $reference_affaire = '';
     public string $pays_destination = '';
     public string $incoterm = 'FCA_USINE';
     public string $incoterm_lieu = '';
     public string $categorie = '';
+    public string $type_commande = '';
+    public ?int   $transporteur_id = null;
     public string $transitaire_nom = '';
     public string $transitaire_contact = '';
     public string $poids = '';
     public string $cout_transitaire = '';
+    public string $cout_reel = '';
 
     // ── Step 1 : MAD Fournisseur ──
     public string $mad_date_prevue = '';
@@ -70,6 +75,7 @@ class DossierForm extends Component
     public string $liv_date_reelle = '';
     public string $liv_mode_transport = '';
     public string $liv_awb = '';
+    public string $liv_motif_retard = '';
     public bool   $liv_applicable = true;
     public string $liv_observations = '';
     public bool   $liv_complete = false;
@@ -84,20 +90,26 @@ class DossierForm extends Component
 
     protected function rules(): array
     {
+        $uniqueRef = 'unique:dossiers,reference,' . ($this->isEdit ? ($this->dossier?->id ?? 'NULL') : 'NULL');
         return [
-            'user_id'           => 'required|exists:users,id',
-            'client_id'         => 'required|exists:clients,id',
-            'fournisseur_id'    => 'nullable|exists:fournisseurs,id',
-            'incoterm'          => 'required|in:FCA_USINE,FCA_TRANSITAIRE,CPT,CFR,EXW,AUTRES',
-            'mad_date_prevue'   => 'nullable|date',
-            'mad_date_reelle'   => 'nullable|date',
-            'fact_date'         => 'nullable|date',
-            'fact_date_paiement'=> 'nullable|date',
-            'fact_montant'      => 'nullable|numeric',
+            'reference'          => "required|string|max:255|{$uniqueRef}",
+            'user_id'            => 'required|exists:users,id',
+            'client_id'          => 'required|exists:clients,id',
+            'fournisseur_id'     => 'nullable|exists:fournisseurs,id',
+            'incoterm'           => 'required|in:FCA_USINE,FCA_TRANSITAIRE,CPT,CFR,EXW,AUTRES',
+            'type_commande'      => 'nullable|in:standard,projet',
+            'transporteur_id'    => 'nullable|exists:transporteurs,id',
+            'cout_reel'          => 'nullable|numeric|min:0',
+            'liv_motif_retard'   => 'nullable|string|max:500',
+            'mad_date_prevue'    => 'nullable|date',
+            'mad_date_reelle'    => 'nullable|date',
+            'fact_date'          => 'nullable|date',
+            'fact_date_paiement' => 'nullable|date',
+            'fact_montant'       => 'nullable|numeric',
             'trans_date_enlevement' => 'nullable|date',
-            'liv_date_prevue'   => 'nullable|date',
-            'liv_date_reelle'   => 'nullable|date',
-            'clot_date_pod'     => 'nullable|date',
+            'liv_date_prevue'    => 'nullable|date',
+            'liv_date_reelle'    => 'nullable|date',
+            'clot_date_pod'      => 'nullable|date',
         ];
     }
 
@@ -118,6 +130,7 @@ class DossierForm extends Component
     private function fillFromModel(): void
     {
         $d = $this->dossier;
+        $this->reference         = $d->reference;
         $this->user_id           = $d->user_id;
         $this->client_id         = $d->client_id;
         $this->fournisseur_id    = $d->fournisseur_id;
@@ -127,10 +140,13 @@ class DossierForm extends Component
         $this->incoterm          = $d->incoterm;
         $this->incoterm_lieu     = $d->incoterm_lieu ?? '';
         $this->categorie         = $d->categorie ?? '';
+        $this->type_commande     = $d->type_commande ?? '';
+        $this->transporteur_id   = $d->transporteur_id;
         $this->transitaire_nom   = $d->transitaire_nom ?? '';
         $this->transitaire_contact = $d->transitaire_contact ?? '';
         $this->poids             = $d->poids ?? '';
         $this->cout_transitaire  = $d->cout_transitaire ?? '';
+        $this->cout_reel         = $d->cout_reel ?? '';
 
         if ($m = $d->etapeMadFournisseur) {
             $this->mad_date_prevue    = $m->date_mad_prevue?->format('Y-m-d') ?? '';
@@ -165,13 +181,14 @@ class DossierForm extends Component
         }
 
         if ($l = $d->etapeLivraison) {
-            $this->liv_date_prevue  = $l->date_livraison_prevue?->format('Y-m-d') ?? '';
-            $this->liv_date_reelle  = $l->date_livraison_reelle?->format('Y-m-d') ?? '';
+            $this->liv_date_prevue    = $l->date_livraison_prevue?->format('Y-m-d') ?? '';
+            $this->liv_date_reelle    = $l->date_livraison_reelle?->format('Y-m-d') ?? '';
             $this->liv_mode_transport = $l->mode_transport ?? '';
-            $this->liv_awb          = $l->awb_bl_numero ?? '';
-            $this->liv_applicable   = $l->applicable;
-            $this->liv_observations = $l->observations ?? '';
-            $this->liv_complete     = $l->complete;
+            $this->liv_awb            = $l->awb_bl_numero ?? '';
+            $this->liv_motif_retard   = $l->motif_retard ?? '';
+            $this->liv_applicable     = $l->applicable;
+            $this->liv_observations   = $l->observations ?? '';
+            $this->liv_complete       = $l->complete;
         }
 
         if ($c = $d->etapeCloture) {
@@ -191,26 +208,29 @@ class DossierForm extends Component
         DB::transaction(function () {
             // Main dossier
             $data = [
+                'reference'        => $this->reference,
                 'user_id'          => $this->user_id,
                 'client_id'        => $this->client_id,
-                'fournisseur_id' => $this->fournisseur_id ?: null,
+                'fournisseur_id'   => $this->fournisseur_id ?: null,
                 'numero_facture'   => $this->numero_facture ?: null,
                 'reference_affaire'=> $this->reference_affaire ?: null,
                 'pays_destination' => $this->pays_destination ?: null,
                 'incoterm'         => $this->incoterm,
                 'incoterm_lieu'    => $this->incoterm_lieu ?: null,
                 'categorie'        => $this->categorie ?: null,
+                'type_commande'    => $this->type_commande ?: null,
+                'transporteur_id'  => $this->transporteur_id ?: null,
                 'transitaire_nom'  => $this->transitaire_nom ?: null,
                 'transitaire_contact' => $this->transitaire_contact ?: null,
                 'poids'            => $this->poids ?: null,
                 'cout_transitaire' => $this->cout_transitaire ?: null,
+                'cout_reel'        => $this->cout_reel ?: null,
             ];
 
             if ($this->isEdit) {
                 $this->dossier->update($data);
                 $d = $this->dossier;
             } else {
-                $data['reference'] = Dossier::genererReference();
                 $d = Dossier::create($data);
             }
 
@@ -263,6 +283,7 @@ class DossierForm extends Component
                 'date_livraison_reelle'  => $this->liv_date_reelle ?: null,
                 'mode_transport'         => $this->liv_mode_transport ?: null,
                 'awb_bl_numero'          => $this->liv_awb ?: null,
+                'motif_retard'           => $this->liv_motif_retard ?: null,
                 'applicable'             => $this->liv_applicable,
                 'observations'           => $this->liv_observations ?: null,
                 'complete'               => $this->liv_complete,
@@ -304,10 +325,11 @@ class DossierForm extends Component
     public function render()
     {
         return view('livewire.dossier-form', [
-            'clients'       => Client::orderBy('nom')->get(),
-            'fournisseurs'  => Fournisseur::orderBy('nom')->get(),
-            'responsables'  => User::where('actif', true)->orderBy('nom')->get(),
-            'title'         => $this->isEdit ? 'Modifier le dossier' : 'Nouveau dossier',
+            'clients'        => Client::orderBy('nom')->get(),
+            'fournisseurs'   => Fournisseur::orderBy('nom')->get(),
+            'responsables'   => User::where('actif', true)->orderBy('nom')->get(),
+            'transporteurs'  => Transporteur::orderBy('nom')->get(),
+            'title'          => $this->isEdit ? 'Modifier le dossier' : 'Nouveau dossier',
         ])->layout('layouts.app', ['title' => $this->isEdit ? 'Modifier dossier' : 'Nouveau dossier']);
     }
 }

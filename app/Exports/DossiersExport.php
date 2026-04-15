@@ -27,7 +27,7 @@ class DossiersExport implements FromQuery, WithHeadings, WithMapping, WithStyles
     {
         return Dossier::query()
             ->with([
-                'client','user','fournisseur',
+                'client','user','fournisseur','transporteur',
                 'etapeMadFournisseur','etapeFacturation',
                 'etapeTransitaire','etapeLivraison','etapeCloture',
             ])
@@ -39,9 +39,9 @@ class DossiersExport implements FromQuery, WithHeadings, WithMapping, WithStyles
     public function headings(): array
     {
         return [
-            'Référence', 'Responsable', 'N° Facture', 'Affaire',
+            'Référence', 'Type', 'Responsable', 'N° Facture', 'Affaire',
             'Client', 'Pays', 'Fournisseur', 'Incoterm', 'Lieu Incoterm',
-            'Transitaire', 'Poids (kg)', 'Coût Transitaire',
+            'Transporteur', 'Poids (kg)', 'Coût Prévu', 'Coût Réel', 'Écart Coût',
             'Statut',
             // Étape 1
             'MAD Prévue', 'MAD Réelle', 'Écart MAD (j)',
@@ -55,7 +55,7 @@ class DossiersExport implements FromQuery, WithHeadings, WithMapping, WithStyles
             'Temps Traitement (j)', 'Obs. Transitaire',
             // Étape 4
             'Livraison Prévue', 'Livraison Réelle', 'Écart Livraison (j)',
-            'Mode Transport', 'AWB/BL', 'Obs. Livraison',
+            'Mode Transport', 'AWB/BL', 'Motif Retard', 'Obs. Livraison',
             // Étape 5
             'POD Reçue', 'Date POD', 'Réf. POD', 'Source POD', 'Obs. Clôture',
         ];
@@ -69,8 +69,13 @@ class DossiersExport implements FromQuery, WithHeadings, WithMapping, WithStyles
         $liv  = $d->etapeLivraison;
         $clot = $d->etapeCloture;
 
+        $ecartCout = ($d->cout_transitaire && $d->cout_reel)
+            ? round($d->cout_reel - $d->cout_transitaire, 2)
+            : null;
+
         return [
             $d->reference,
+            $d->type_commande,
             $d->user?->initiales,
             $d->numero_facture,
             $d->reference_affaire,
@@ -79,9 +84,11 @@ class DossiersExport implements FromQuery, WithHeadings, WithMapping, WithStyles
             $d->fournisseur?->nom,
             $d->incoterm_label,
             $d->incoterm_lieu,
-            $d->transitaire_nom,
+            $d->transporteur?->nom,
             $d->poids,
             $d->cout_transitaire,
+            $d->cout_reel,
+            $ecartCout,
             $d->statut_label,
             // MAD
             $mad?->date_mad_prevue?->format('d/m/Y'),
@@ -113,6 +120,7 @@ class DossiersExport implements FromQuery, WithHeadings, WithMapping, WithStyles
             $liv?->ecart_jours,
             $liv?->mode_transport,
             $liv?->awb_bl_numero,
+            $liv?->motif_retard,
             $liv?->observations,
             // Clôture
             $clot?->pod_recue  ? 'OUI' : 'NON',

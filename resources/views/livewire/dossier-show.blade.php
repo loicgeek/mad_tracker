@@ -18,8 +18,20 @@
         </div>
     </div>
 
+    {{-- ── Action suggérée ─────────────────────────────────────── --}}
+    <div class="flex items-start gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800">
+        <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <div>
+            <p class="font-semibold text-blue-900">Action suggérée</p>
+            <p>{{ $dossier->action_suggeree }}</p>
+        </div>
+    </div>
+
     {{-- ── Summary cards ────────────────────────────────────────── --}}
-    <div class="grid grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="card p-4">
             <p class="text-xs text-slate-500 mb-1">Client</p>
             <p class="font-semibold text-slate-900">{{ $dossier->client->nom }}</p>
@@ -40,6 +52,48 @@
             <span class="badge badge-gray text-xs">{{ $dossier->user->initiales }}</span>
         </div>
     </div>
+
+    {{-- ── Transporteur + Coûts ──────────────────────────────────── --}}
+    @if($dossier->transporteur_id || $dossier->cout_transitaire || $dossier->cout_reel || $dossier->type_commande)
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        @if($dossier->transporteur_id)
+        <div class="card p-4">
+            <p class="text-xs text-slate-500 mb-1">Transporteur</p>
+            <p class="font-semibold text-slate-900">{{ $dossier->transporteur->nom }}</p>
+            @if($dossier->transporteur->contact_nom)
+                <p class="text-xs text-slate-400">{{ $dossier->transporteur->contact_nom }}</p>
+            @endif
+        </div>
+        @endif
+        @if($dossier->type_commande)
+        <div class="card p-4">
+            <p class="text-xs text-slate-500 mb-1">Type commande</p>
+            <span class="badge {{ $dossier->type_commande === 'projet' ? 'badge-purple' : 'badge-gray' }} capitalize">
+                {{ $dossier->type_commande }}
+            </span>
+        </div>
+        @endif
+        @if($dossier->cout_transitaire || $dossier->cout_reel)
+        <div class="card p-4 {{ $dossier->transporteur_id && $dossier->type_commande ? '' : 'col-span-2' }}">
+            <p class="text-xs text-slate-500 mb-1">Coûts transport</p>
+            <div class="space-y-1">
+                @if($dossier->cout_transitaire)
+                    <p class="text-sm text-slate-600">Prévu : <span class="font-semibold">{{ number_format($dossier->cout_transitaire, 2) }} €</span></p>
+                @endif
+                @if($dossier->cout_reel)
+                    <p class="text-sm text-slate-600">Réel : <span class="font-semibold">{{ number_format($dossier->cout_reel, 2) }} €</span></p>
+                @endif
+                @if($dossier->cout_transitaire && $dossier->cout_reel)
+                    @php $ecart = $dossier->cout_reel - $dossier->cout_transitaire; @endphp
+                    <p class="text-xs {{ $ecart > 0 ? 'text-red-500' : 'text-emerald-600' }} font-medium">
+                        Écart : {{ $ecart > 0 ? '+' : '' }}{{ number_format($ecart, 2) }} €
+                    </p>
+                @endif
+            </div>
+        </div>
+        @endif
+    </div>
+    @endif
 
     {{-- ── Alertes ──────────────────────────────────────────────── --}}
     @if($dossier->has_alerte)

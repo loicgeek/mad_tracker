@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\DB;
+use App\Models\Transporteur;
 
 class Dossier extends Model
 {
@@ -18,8 +19,9 @@ class Dossier extends Model
         'reference', 'user_id', 'client_id', 'fournisseur_id',
         'numero_facture', 'reference_affaire', 'pays_destination',
         'incoterm', 'incoterm_lieu', 'categorie',
+        'type_commande', 'transporteur_id',
         'transitaire_nom', 'transitaire_contact',
-        'poids', 'cout_transitaire',
+        'poids', 'cout_transitaire', 'cout_reel',
         'statut',
         'alerte_retard_mad', 'alerte_facture_manquante',
         'alerte_transitaire_manquant', 'alerte_pod_manquante',
@@ -29,6 +31,7 @@ class Dossier extends Model
     protected $casts = [
         'poids'                        => 'decimal:2',
         'cout_transitaire'             => 'decimal:2',
+        'cout_reel'                    => 'decimal:2',
         'alerte_retard_mad'            => 'boolean',
         'alerte_facture_manquante'     => 'boolean',
         'alerte_transitaire_manquant'  => 'boolean',
@@ -51,6 +54,13 @@ class Dossier extends Model
     public function fournisseur(): BelongsTo
     {
         return $this->belongsTo(Fournisseur::class)->withDefault([
+            'nom' => 'Non défini',
+        ]);
+    }
+
+    public function transporteur(): BelongsTo
+    {
+        return $this->belongsTo(Transporteur::class)->withDefault([
             'nom' => 'Non défini',
         ]);
     }
@@ -140,6 +150,20 @@ class Dossier extends Model
         };
     }
 
+    public function getActionSuggereeAttribute(): string
+    {
+        return match($this->statut) {
+            'en_attente'      => 'Saisir la date MAD fournisseur prévue',
+            'mad_fournisseur' => 'Vérifier les documents reçus et émettre la facture',
+            'facture'         => 'Communiquer les instructions au transitaire',
+            'transitaire_ok'  => 'Confirmer la date d\'enlèvement',
+            'enleve'          => 'Suivre l\'expédition et mettre à jour la livraison prévue',
+            'livre'           => 'Récupérer le POD et clôturer le dossier',
+            'finalise'        => 'Dossier clôturé — vérifier le paiement',
+            default           => 'Mettre à jour le dossier',
+        };
+    }
+
     public function getHasAlerteAttribute(): bool
     {
         return $this->alerte_retard_mad
@@ -204,6 +228,8 @@ class Dossier extends Model
 
     public function recalculerStatut(): void
     {
+        $ancienStatut = $this->statut;
+
         if ($this->etapeCloture?->complete) {
             $this->statut = 'finalise';
         } elseif ($this->etapeLivraison?->complete) {
@@ -220,6 +246,18 @@ class Dossier extends Model
 
         $this->saveQuietly();
         $this->refreshAlertes();
+
+        if ($this->statut !== $ancienStatut && $this->user) {
+            $this->user->notify(new \App\Notifications\DossierStatutChanged(
+                dossierId:          $this->id,
+                reference:          $this->reference,
+                clientNom:          $this->client?->nom ?? '—',
+                ancienStatut:       $ancienStatut,
+                nouveauStatut:      $this->statut,
+                nouveauStatutLabel: $this->statut_label,
+                actionSuggeree:     $this->action_suggeree,
+            ));
+        }
     }
 
     // ── Scopes ─────────────────────────────────────────────────────
@@ -247,20 +285,4 @@ class Dossier extends Model
 
     // ── Static Helpers ─────────────────────────────────────────────
 
-   public static function genererReference(): string
-{
-    return DB::transaction(function () {
-        $year = now()->year;
-        $prefix = "DOS-{$year}-";
-
-        $maxSeq = DB::table((new static())->getTable())
-            ->where('reference', 'like', "{$prefix}%")
-            ->lockForUpdate()
-            ->max(DB::raw("CAST(SUBSTRING_INDEX(reference, '-', -1) AS UNSIGNED)"));
-
-        $seq = $maxSeq ? $maxSeq + 1 : 1;
-
-        return sprintf('DOS-%d-%04d', $year, $seq);
-    });
-}
 }

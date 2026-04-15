@@ -18,6 +18,9 @@ class Analyse extends Component
     public array $parClient = [];
     public array $parIncoterm = [];
     public array $parResponsable = [];
+    public array $parTransporteur = [];
+    public array $parType = [];
+    public array $delaiParIncoterm = [];
 
     public function mount(): void { $this->loadData(); }
     public function updatedPeriode(): void { $this->loadData(); }
@@ -114,6 +117,76 @@ class Analyse extends Component
             )
             ->orderByDesc('total')
             ->get()
+            ->toArray();
+
+        // Par transporteur
+        $this->parTransporteur = DB::table('dossiers')
+            ->join('transporteurs', 'transporteurs.id', '=', 'dossiers.transporteur_id')
+            ->leftJoin('etape_livraisons', 'etape_livraisons.dossier_id', '=', 'dossiers.id')
+            ->where('dossiers.created_at', '>=', $since)
+            ->whereNull('dossiers.deleted_at')
+            ->groupBy('transporteurs.id', 'transporteurs.nom')
+            ->select(
+                'transporteurs.nom',
+                DB::raw('COUNT(dossiers.id) as total'),
+                DB::raw('SUM(CASE WHEN etape_livraisons.date_livraison_reelle IS NOT NULL THEN 1 ELSE 0 END) as total_livres'),
+                DB::raw('SUM(CASE WHEN etape_livraisons.ecart_livraison_jours <= 0 AND etape_livraisons.date_livraison_reelle IS NOT NULL THEN 1 ELSE 0 END) as livres_a_temps'),
+                DB::raw('AVG(dossiers.cout_transitaire) as moy_cout_prevu'),
+                DB::raw('AVG(dossiers.cout_reel) as moy_cout_reel'),
+            )
+            ->orderByDesc('total')
+            ->get()
+            ->map(function ($r) {
+                $r->pct_a_temps = $r->total_livres > 0
+                    ? round($r->livres_a_temps / $r->total_livres * 100, 1)
+                    : null;
+                $r->ecart_pct = ($r->moy_cout_prevu > 0 && $r->moy_cout_reel !== null)
+                    ? round(($r->moy_cout_reel - $r->moy_cout_prevu) / $r->moy_cout_prevu * 100, 1)
+                    : null;
+                return $r;
+            })
+            ->toArray();
+
+        // Par type de commande
+        $this->parType = DB::table('dossiers')
+            ->where('dossiers.created_at', '>=', $since)
+            ->whereNull('dossiers.deleted_at')
+            ->whereIn('type_commande', ['standard', 'projet'])
+            ->leftJoin('etape_livraisons', 'etape_livraisons.dossier_id', '=', 'dossiers.id')
+            ->groupBy('dossiers.type_commande')
+            ->select(
+                'dossiers.type_commande',
+                DB::raw('COUNT(dossiers.id) as total'),
+                DB::raw('SUM(CASE WHEN dossiers.statut = "finalise" THEN 1 ELSE 0 END) as finalises'),
+                DB::raw('AVG(etape_livraisons.ecart_livraison_jours) as delai_moyen'),
+            )
+            ->get()
+            ->map(function ($r) {
+                $r->taux = $r->total > 0 ? round($r->finalises / $r->total * 100, 1) : 0;
+                $r->delai_moyen = $r->delai_moyen !== null ? round($r->delai_moyen, 1) : null;
+                return $r;
+            })
+            ->toArray();
+
+        // Délai moyen par incoterm
+        $this->delaiParIncoterm = DB::table('dossiers')
+            ->join('etape_livraisons', 'etape_livraisons.dossier_id', '=', 'dossiers.id')
+            ->where('dossiers.created_at', '>=', $since)
+            ->whereNull('dossiers.deleted_at')
+            ->whereNotNull('etape_livraisons.ecart_livraison_jours')
+            ->groupBy('dossiers.incoterm')
+            ->select(
+                'dossiers.incoterm',
+                DB::raw('COUNT(*) as total'),
+                DB::raw('AVG(etape_livraisons.ecart_livraison_jours) as delai_moyen'),
+            )
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn($r) => (object)[
+                'incoterm'    => $r->incoterm,
+                'total'       => $r->total,
+                'delai_moyen' => round($r->delai_moyen, 1),
+            ])
             ->toArray();
     }
 

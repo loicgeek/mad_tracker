@@ -11,6 +11,8 @@ use App\Http\Livewire\FournisseurIndex;
 use App\Http\Livewire\ImportData;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Livewire\TransporteurIndex;
 
 // Auth
 Route::middleware('guest')->group(function () {
@@ -34,6 +36,11 @@ Route::middleware('auth')->group(function () {
     // Référentiels
     Route::get('/clients', ClientIndex::class)->name('clients.index');
     Route::get('/fournisseurs', FournisseurIndex::class)->name('fournisseurs.index');
+    Route::get('/transporteurs', TransporteurIndex::class)->name('transporteurs.index');
+
+    // Notifications
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.readAll');
+    Route::get('/notifications/{id}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
 
     // Import
     Route::get('/import', ImportData::class)->name('import');

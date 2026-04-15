@@ -14,6 +14,7 @@ class Dashboard extends Component
     public array $alertes = [];
     public array $chartStatuts = [];
     public array $chartMensuel = [];
+    public array $chartCouts = [];
 
     public function mount(): void
     {
@@ -24,6 +25,12 @@ class Dashboard extends Component
 
     private function loadStats(): void
     {
+        $livresBase = DB::table('etape_livraisons')
+            ->whereNotNull('date_livraison_reelle')
+            ->whereNotNull('date_livraison_prevue');
+
+        $totalLivres = (clone $livresBase)->count();
+
         $this->stats = [
             'total'        => Dossier::count(),
             'en_cours'     => Dossier::enCours()->count(),
@@ -37,6 +44,33 @@ class Dashboard extends Component
                     ->avg('temps_traitement_jours') ?? 0, 1
             ),
             'pod_en_attente' => Dossier::where('alerte_pod_manquante', true)->count(),
+            // Nouveaux KPIs
+            'taux_livraison_temps' => $totalLivres > 0
+                ? round((clone $livresBase)->where('ecart_livraison_jours', '<=', 0)->count() / $totalLivres * 100, 1)
+                : 0,
+            'taux_retard' => $totalLivres > 0
+                ? round((clone $livresBase)->where('ecart_livraison_jours', '>', 0)->count() / $totalLivres * 100, 1)
+                : 0,
+            'delai_moyen_livraison' => round(
+                (clone $livresBase)->avg('ecart_livraison_jours') ?? 0, 1
+            ),
+            'ecart_cout_total' => round(
+                DB::table('dossiers')
+                    ->whereNotNull('cout_reel')
+                    ->whereNotNull('cout_transitaire')
+                    ->whereNull('deleted_at')
+                    ->selectRaw('SUM(cout_reel - cout_transitaire) as ecart')
+                    ->value('ecart') ?? 0, 2
+            ),
+            'ecart_cout_pct' => round(
+                DB::table('dossiers')
+                    ->whereNotNull('cout_reel')
+                    ->whereNotNull('cout_transitaire')
+                    ->where('cout_transitaire', '>', 0)
+                    ->whereNull('deleted_at')
+                    ->selectRaw('AVG((cout_reel - cout_transitaire) / cout_transitaire * 100) as pct')
+                    ->value('pct') ?? 0, 1
+            ),
         ];
     }
 
@@ -77,6 +111,28 @@ class Dashboard extends Component
         $this->chartStatuts = [
             'labels' => $labelsNice,
             'data'   => array_map(fn($s) => $statutData[$s] ?? 0, $labels),
+        ];
+
+        // Coût prévu vs réel par mois
+        $coutsMensuels = DB::table('dossiers')
+            ->whereNotNull('cout_reel')
+            ->whereNotNull('cout_transitaire')
+            ->whereNull('deleted_at')
+            ->where('created_at', '>=', now()->subYear())
+            ->select(
+                DB::raw('YEAR(created_at) as year'),
+                DB::raw('MONTH(created_at) as month'),
+                DB::raw('AVG(cout_transitaire) as moy_prevu'),
+                DB::raw('AVG(cout_reel) as moy_reel'),
+            )
+            ->groupBy('year', 'month')
+            ->orderBy('year')->orderBy('month')
+            ->get();
+
+        $this->chartCouts = [
+            'labels' => $coutsMensuels->map(fn($r) => sprintf('%02d/%d', $r->month, $r->year))->toArray(),
+            'prevu'  => $coutsMensuels->map(fn($r) => round($r->moy_prevu, 2))->toArray(),
+            'reel'   => $coutsMensuels->map(fn($r) => round($r->moy_reel, 2))->toArray(),
         ];
 
         // Dossiers par mois (12 derniers mois)

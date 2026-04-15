@@ -78,6 +78,17 @@
                     </svg>
                     Fournisseurs
                 </a>
+
+                <a href="{{ route('transporteurs.index') }}"
+                   class="sidebar-link {{ request()->routeIs('transporteurs.*') ? 'active' : '' }}">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10l2 2h2m6-12h2l3 4v6h-2m-6-6h6"/>
+                    </svg>
+                    Transporteurs
+                </a>
             </div>
 
             <div class="pt-3">
@@ -138,6 +149,82 @@
             <h1 class="text-lg font-semibold text-slate-900">{{ $title ?? 'MAD Tracker' }}</h1>
             <div class="flex items-center gap-3">
                 <span class="text-sm text-slate-400">{{ now()->format('d/m/Y') }}</span>
+
+                {{-- Cloche notifications --}}
+                @php $unreadCount = auth()->user()->unreadNotifications->count(); @endphp
+                <div
+                    x-data="{ open: false }"
+                    @click.outside="open = false"
+                    class="relative"
+                >
+                    <button
+                        @click="open = !open"
+                        class="relative w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors"
+                        title="Notifications"
+                    >
+                        <svg class="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                        @if($unreadCount > 0)
+                        <span class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                            {{ $unreadCount > 9 ? '9+' : $unreadCount }}
+                        </span>
+                        @endif
+                    </button>
+
+                    {{-- Dropdown --}}
+                    <div
+                        x-show="open"
+                        x-transition:enter="transition ease-out duration-150"
+                        x-transition:enter-start="opacity-0 scale-95 translate-y-1"
+                        x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-100"
+                        x-transition:leave-end="opacity-0 scale-95"
+                        class="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden"
+                        style="display:none"
+                    >
+                        <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                            <span class="text-sm font-semibold text-slate-800">Notifications</span>
+                            @if($unreadCount > 0)
+                            <form method="POST" action="{{ route('notifications.readAll') }}">
+                                @csrf
+                                <button type="submit" class="text-xs text-brand-600 hover:underline">
+                                    Tout marquer lu
+                                </button>
+                            </form>
+                            @endif
+                        </div>
+
+                        @php $notifications = auth()->user()->notifications()->latest()->take(10)->get(); @endphp
+
+                        <div class="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                            @forelse($notifications as $notif)
+                            @php $data = $notif->data; @endphp
+                            <a
+                                href="{{ route('notifications.read', $notif->id) }}"
+                                class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors {{ $notif->read_at ? 'opacity-60' : 'bg-blue-50/40' }}"
+                            >
+                                <div class="mt-0.5 w-2 h-2 rounded-full flex-shrink-0 {{ $notif->read_at ? 'bg-slate-300' : 'bg-brand-600' }}"></div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-xs font-semibold text-slate-800 truncate">{{ $data['reference'] ?? '' }}</p>
+                                    <p class="text-xs text-slate-500 mt-0.5">
+                                        Statut : <span class="font-medium text-slate-700">{{ $data['nouveau_statut_label'] ?? '' }}</span>
+                                    </p>
+                                    @if(!empty($data['action_suggeree']))
+                                    <p class="text-xs text-brand-600 mt-0.5 truncate">→ {{ $data['action_suggeree'] }}</p>
+                                    @endif
+                                    <p class="text-[10px] text-slate-400 mt-1">{{ $notif->created_at->diffForHumans() }}</p>
+                                </div>
+                            </a>
+                            @empty
+                            <div class="px-4 py-6 text-center text-sm text-slate-400">
+                                Aucune notification
+                            </div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
             </div>
         </header>
 
