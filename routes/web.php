@@ -56,5 +56,6 @@ Route::middleware('auth')->group(function () {
 
     // Exports
     Route::get('/export/dossiers', [ExportController::class, 'dossiers'])->name('export.dossiers');
+    Route::get('/export/analyses', [ExportController::class, 'analyses'])->name('export.analyses');
     Route::get('/export/dossier/{id}/pdf', [ExportController::class, 'dossierPdf'])->name('export.dossier.pdf');
 });

@@ -10,8 +10,9 @@ use Illuminate\Support\Facades\DB;
 
 class Analyse extends Component
 {
-    public string $periode = '12'; // mois
-    public string $groupBy = 'fournisseur';
+    public string $periode  = '12'; // mois
+    public string $groupBy  = 'fournisseur';
+    public string $viewMode = 'chart'; // table | chart
 
     public array $statsGlobales = [];
     public array $parFournisseur = [];

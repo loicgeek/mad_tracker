@@ -14,6 +14,38 @@
                 <option value="12">12 mois</option>
                 <option value="24">24 mois</option>
             </select>
+
+            {{-- Vue toggle --}}
+            <div class="flex rounded-lg border border-slate-200 overflow-hidden text-sm">
+                <button wire:click="$set('viewMode','table')"
+                        class="px-3 py-1.5 flex items-center gap-1.5 transition-colors
+                               {{ $viewMode === 'table' ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50' }}">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M3 10h18M3 6h18M3 14h18M3 18h18"/>
+                    </svg>
+                    Tableau
+                </button>
+                <button wire:click="$set('viewMode','chart')"
+                        class="px-3 py-1.5 flex items-center gap-1.5 transition-colors border-l border-slate-200
+                               {{ $viewMode === 'chart' ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50' }}">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    Graphique
+                </button>
+            </div>
+
+            {{-- Export CSV --}}
+            <a href="{{ route('export.analyses', ['periode' => $periode]) }}"
+               class="btn btn-secondary flex items-center gap-1.5 text-sm">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                Exporter CSV
+            </a>
         </div>
     </div>
 
@@ -21,12 +53,12 @@
     <div class="grid grid-cols-3 md:grid-cols-6 gap-4">
         @php
             $kpis = [
-                ['label' => 'Dossiers', 'value' => $statsGlobales['total'], 'color' => 'blue'],
-                ['label' => 'Finalisés', 'value' => $statsGlobales['finalises'], 'color' => 'green'],
+                ['label' => 'Dossiers',         'value' => $statsGlobales['total'],                 'color' => 'blue'],
+                ['label' => 'Finalisés',         'value' => $statsGlobales['finalises'],             'color' => 'green'],
                 ['label' => 'Taux finalisation', 'value' => $statsGlobales['taux_finalisation'].'%', 'color' => 'purple'],
-                ['label' => 'Moy. traitement', 'value' => $statsGlobales['moy_traitement'].'j', 'color' => 'orange'],
-                ['label' => 'Écart moy. MAD', 'value' => $statsGlobales['ecart_moyen_mad'].'j', 'color' => ($statsGlobales['ecart_moyen_mad'] > 0 ? 'red' : 'green')],
-                ['label' => 'POD reçues', 'value' => $statsGlobales['total_pod'], 'color' => 'teal'],
+                ['label' => 'Moy. traitement',   'value' => $statsGlobales['moy_traitement'].'j',    'color' => 'orange'],
+                ['label' => 'Écart moy. MAD',    'value' => $statsGlobales['ecart_moyen_mad'].'j',   'color' => ($statsGlobales['ecart_moyen_mad'] > 0 ? 'red' : 'green')],
+                ['label' => 'POD reçues',        'value' => $statsGlobales['total_pod'],             'color' => 'teal'],
             ];
         @endphp
         @foreach($kpis as $kpi)
@@ -44,6 +76,7 @@
             <div class="card-header">
                 <h3 class="font-semibold text-slate-800">Par fournisseur</h3>
             </div>
+            @if($viewMode === 'table')
             <div class="table-wrapper rounded-none rounded-b-xl border-0">
                 <table class="data-table">
                     <thead>
@@ -59,9 +92,7 @@
                         <tr>
                             <td class="font-medium text-sm">{{ $f->nom }}</td>
                             <td class="text-right">{{ $f->total }}</td>
-                            <td class="text-right">
-                                <span class="text-emerald-600 font-medium">{{ $f->finalises }}</span>
-                            </td>
+                            <td class="text-right"><span class="text-emerald-600 font-medium">{{ $f->finalises }}</span></td>
                             <td class="text-right text-xs @if(($f->moy_traitement ?? 0) > 30) text-red-600 font-semibold @endif">
                                 {{ $f->moy_traitement ? round($f->moy_traitement, 1).'j' : '—' }}
                             </td>
@@ -70,6 +101,33 @@
                     </tbody>
                 </table>
             </div>
+            @else
+            @php
+                $fNoms    = collect($parFournisseur)->pluck('nom')->values()->toArray();
+                $fTotal   = collect($parFournisseur)->pluck('total')->values()->toArray();
+                $fFinal   = collect($parFournisseur)->pluck('finalises')->values()->toArray();
+            @endphp
+            <div wire:key="chart-fournisseur-{{ $periode }}"
+                 x-data="{
+                     init() {
+                         new ApexCharts(this.$refs.chart, {
+                             chart: { type: 'bar', height: 280, toolbar: { show: false }, fontFamily: 'Instrument Sans, sans-serif' },
+                             plotOptions: { bar: { horizontal: true, borderRadius: 3, barHeight: '60%' } },
+                             series: [
+                                 { name: 'Total',     data: {{ json_encode($fTotal) }} },
+                                 { name: 'Finalisés', data: {{ json_encode($fFinal) }} },
+                             ],
+                             xaxis: { categories: {{ json_encode($fNoms) }} },
+                             colors: ['#6366f1','#22c55e'],
+                             legend: { position: 'top' },
+                             dataLabels: { enabled: false },
+                             grid: { borderColor: '#f1f5f9' },
+                         }).render();
+                     }
+                 }" class="p-4">
+                <div x-ref="chart" style="min-height:280px"></div>
+            </div>
+            @endif
         </div>
 
         {{-- Par client --}}
@@ -77,6 +135,7 @@
             <div class="card-header">
                 <h3 class="font-semibold text-slate-800">Par client</h3>
             </div>
+            @if($viewMode === 'table')
             <div class="table-wrapper rounded-none rounded-b-xl border-0">
                 <table class="data-table">
                     <thead>
@@ -101,6 +160,34 @@
                     </tbody>
                 </table>
             </div>
+            @else
+            @php
+                $cNoms  = collect($parClient)->pluck('nom')->values()->toArray();
+                $cTotal = collect($parClient)->pluck('total')->values()->toArray();
+                $cFinal = collect($parClient)->pluck('finalises')->values()->toArray();
+                $cTaux  = collect($parClient)->map(fn($c) => $c->total > 0 ? round($c->finalises / $c->total * 100, 1) : 0)->values()->toArray();
+            @endphp
+            <div wire:key="chart-client-{{ $periode }}"
+                 x-data="{
+                     init() {
+                         new ApexCharts(this.$refs.chart, {
+                             chart: { type: 'bar', height: 280, toolbar: { show: false }, fontFamily: 'Instrument Sans, sans-serif' },
+                             plotOptions: { bar: { horizontal: true, borderRadius: 3, barHeight: '60%' } },
+                             series: [
+                                 { name: 'Total',     data: {{ json_encode($cTotal) }} },
+                                 { name: 'Finalisés', data: {{ json_encode($cFinal) }} },
+                             ],
+                             xaxis: { categories: {{ json_encode($cNoms) }} },
+                             colors: ['#3b82f6','#22c55e'],
+                             legend: { position: 'top' },
+                             dataLabels: { enabled: false },
+                             grid: { borderColor: '#f1f5f9' },
+                         }).render();
+                     }
+                 }" class="p-4">
+                <div x-ref="chart" style="min-height:280px"></div>
+            </div>
+            @endif
         </div>
 
         {{-- Par incoterm --}}
@@ -108,6 +195,7 @@
             <div class="card-header">
                 <h3 class="font-semibold text-slate-800">Par Incoterm</h3>
             </div>
+            @if($viewMode === 'table')
             <div class="table-wrapper rounded-none rounded-b-xl border-0">
                 <table class="data-table">
                     <thead>
@@ -128,6 +216,33 @@
                     </tbody>
                 </table>
             </div>
+            @else
+            @php
+                $iLabels = collect($parIncoterm)->pluck('incoterm')->values()->toArray();
+                $iTotal  = collect($parIncoterm)->pluck('total')->values()->toArray();
+                $iMoy    = collect($parIncoterm)->map(fn($i) => $i->moy_traitement ? round($i->moy_traitement, 1) : 0)->values()->toArray();
+            @endphp
+            <div wire:key="chart-incoterm-{{ $periode }}"
+                 x-data="{
+                     init() {
+                         new ApexCharts(this.$refs.chart, {
+                             chart: { type: 'bar', height: 260, toolbar: { show: false }, fontFamily: 'Instrument Sans, sans-serif' },
+                             plotOptions: { bar: { borderRadius: 4, columnWidth: '55%' } },
+                             series: [
+                                 { name: 'Dossiers',       data: {{ json_encode($iTotal) }} },
+                                 { name: 'Moy. trt. (j)', data: {{ json_encode($iMoy) }} },
+                             ],
+                             xaxis: { categories: {{ json_encode($iLabels) }} },
+                             colors: ['#6366f1','#f59e0b'],
+                             legend: { position: 'top' },
+                             dataLabels: { enabled: false },
+                             grid: { borderColor: '#f1f5f9' },
+                         }).render();
+                     }
+                 }" class="p-4">
+                <div x-ref="chart" style="min-height:260px"></div>
+            </div>
+            @endif
         </div>
 
         {{-- Par responsable --}}
@@ -135,6 +250,7 @@
             <div class="card-header">
                 <h3 class="font-semibold text-slate-800">Par responsable</h3>
             </div>
+            @if($viewMode === 'table')
             <div class="table-wrapper rounded-none rounded-b-xl border-0">
                 <table class="data-table">
                     <thead>
@@ -168,6 +284,35 @@
                     </tbody>
                 </table>
             </div>
+            @else
+            @php
+                $rNoms    = collect($parResponsable)->pluck('initiales')->values()->toArray();
+                $rTotal   = collect($parResponsable)->pluck('total')->values()->toArray();
+                $rFinal   = collect($parResponsable)->pluck('finalises')->values()->toArray();
+                $rAlertes = collect($parResponsable)->pluck('alertes')->values()->toArray();
+            @endphp
+            <div wire:key="chart-responsable-{{ $periode }}"
+                 x-data="{
+                     init() {
+                         new ApexCharts(this.$refs.chart, {
+                             chart: { type: 'bar', height: 260, toolbar: { show: false }, fontFamily: 'Instrument Sans, sans-serif', stacked: false },
+                             plotOptions: { bar: { borderRadius: 3, columnWidth: '60%' } },
+                             series: [
+                                 { name: 'Total',     data: {{ json_encode($rTotal) }} },
+                                 { name: 'Finalisés', data: {{ json_encode($rFinal) }} },
+                                 { name: 'Alertes',   data: {{ json_encode($rAlertes) }} },
+                             ],
+                             xaxis: { categories: {{ json_encode($rNoms) }} },
+                             colors: ['#6366f1','#22c55e','#ef4444'],
+                             legend: { position: 'top' },
+                             dataLabels: { enabled: false },
+                             grid: { borderColor: '#f1f5f9' },
+                         }).render();
+                     }
+                 }" class="p-4">
+                <div x-ref="chart" style="min-height:260px"></div>
+            </div>
+            @endif
         </div>
 
     </div>
@@ -178,6 +323,7 @@
         <div class="card-header">
             <h3 class="font-semibold text-slate-800">Performance par transporteur</h3>
         </div>
+        @if($viewMode === 'table')
         <div class="table-wrapper rounded-none rounded-b-xl border-0">
             <table class="data-table">
                 <thead>
@@ -220,18 +366,65 @@
                 </tbody>
             </table>
         </div>
+        @else
+        @php
+            $tNoms      = collect($parTransporteur)->pluck('nom')->values()->toArray();
+            $tPctTemps  = collect($parTransporteur)->map(fn($r) => $r->pct_a_temps ?? 0)->values()->toArray();
+            $tEcartPct  = collect($parTransporteur)->map(fn($r) => $r->ecart_pct ?? 0)->values()->toArray();
+            $tCoutPrevu = collect($parTransporteur)->map(fn($r) => $r->moy_cout_prevu ? round($r->moy_cout_prevu) : 0)->values()->toArray();
+            $tCoutReel  = collect($parTransporteur)->map(fn($r) => $r->moy_cout_reel ? round($r->moy_cout_reel) : 0)->values()->toArray();
+        @endphp
+        <div wire:key="chart-transporteur-{{ $periode }}"
+             x-data="{
+                 init() {
+                     // % à temps
+                     new ApexCharts(this.$refs.chartTemps, {
+                         chart: { type: 'bar', height: 220, toolbar: { show: false }, fontFamily: 'Instrument Sans, sans-serif' },
+                         plotOptions: { bar: { horizontal: true, borderRadius: 3, barHeight: '55%',
+                             dataLabels: { position: 'top' } } },
+                         series: [{ name: '% à temps', data: {{ json_encode($tPctTemps) }} }],
+                         xaxis: { categories: {{ json_encode($tNoms) }}, max: 100,
+                             labels: { formatter: v => v + '%' } },
+                         colors: ['#22c55e'],
+                         dataLabels: { enabled: true, formatter: v => v + '%', offsetX: 20,
+                             style: { fontSize: '11px', colors: ['#475569'] } },
+                         grid: { borderColor: '#f1f5f9' },
+                         title: { text: '% livraisons à temps', style: { fontSize: '12px', color: '#64748b', fontWeight: 500 } },
+                     }).render();
+                     // Coûts prévu vs réel
+                     new ApexCharts(this.$refs.chartCouts, {
+                         chart: { type: 'bar', height: 220, toolbar: { show: false }, fontFamily: 'Instrument Sans, sans-serif' },
+                         plotOptions: { bar: { borderRadius: 3, columnWidth: '60%' } },
+                         series: [
+                             { name: 'Coût prévu moy.', data: {{ json_encode($tCoutPrevu) }} },
+                             { name: 'Coût réel moy.',  data: {{ json_encode($tCoutReel) }} },
+                         ],
+                         xaxis: { categories: {{ json_encode($tNoms) }} },
+                         colors: ['#6366f1','#f59e0b'],
+                         legend: { position: 'top' },
+                         dataLabels: { enabled: false },
+                         yaxis: { labels: { formatter: v => v.toFixed(0) + ' €' } },
+                         grid: { borderColor: '#f1f5f9' },
+                         title: { text: 'Coût prévu vs réel (moy.)', style: { fontSize: '12px', color: '#64748b', fontWeight: 500 } },
+                     }).render();
+                 }
+             }" class="p-4 grid grid-cols-2 gap-6">
+            <div x-ref="chartTemps"  style="min-height:220px"></div>
+            <div x-ref="chartCouts"  style="min-height:220px"></div>
+        </div>
+        @endif
     </div>
     @endif
 
     {{-- ── Standard vs Projet + Délai par Incoterm ────────────────── --}}
     <div class="grid grid-cols-2 gap-6">
 
-        {{-- Par type de commande --}}
         @if(count($parType) > 0)
         <div class="card">
             <div class="card-header">
                 <h3 class="font-semibold text-slate-800">Standard vs Projet</h3>
             </div>
+            @if($viewMode === 'table')
             <div class="table-wrapper rounded-none rounded-b-xl border-0">
                 <table class="data-table">
                     <thead>
@@ -267,15 +460,43 @@
                     </tbody>
                 </table>
             </div>
+            @else
+            @php
+                $typeLabels = collect($parType)->map(fn($r) => ucfirst($r->type_commande))->values()->toArray();
+                $typeTotal  = collect($parType)->pluck('total')->values()->toArray();
+                $typeFinal  = collect($parType)->pluck('finalises')->values()->toArray();
+                $typeTaux   = collect($parType)->pluck('taux')->values()->toArray();
+            @endphp
+            <div wire:key="chart-type-{{ $periode }}"
+                 x-data="{
+                     init() {
+                         new ApexCharts(this.$refs.chart, {
+                             chart: { type: 'donut', height: 260, fontFamily: 'Instrument Sans, sans-serif' },
+                             series: {{ json_encode($typeTotal) }},
+                             labels: {{ json_encode($typeLabels) }},
+                             colors: ['#6366f1','#a855f7'],
+                             legend: { position: 'bottom' },
+                             plotOptions: { pie: { donut: { size: '60%',
+                                 labels: { show: true, total: { show: true, label: 'Total', fontSize: '14px' } }
+                             }}},
+                             dataLabels: { formatter: (v, opts) =>
+                                 opts.w.config.labels[opts.seriesIndex] + ': ' + opts.w.globals.series[opts.seriesIndex]
+                             },
+                         }).render();
+                     }
+                 }" class="p-4">
+                <div x-ref="chart" style="min-height:260px"></div>
+            </div>
+            @endif
         </div>
         @endif
 
-        {{-- Délai moyen par incoterm --}}
         @if(count($delaiParIncoterm) > 0)
         <div class="card">
             <div class="card-header">
                 <h3 class="font-semibold text-slate-800">Délai moyen de livraison par incoterm</h3>
             </div>
+            @if($viewMode === 'table')
             <div class="table-wrapper rounded-none rounded-b-xl border-0">
                 <table class="data-table">
                     <thead>
@@ -300,6 +521,34 @@
                     </tbody>
                 </table>
             </div>
+            @else
+            @php
+                $diLabels = collect($delaiParIncoterm)->pluck('incoterm')->values()->toArray();
+                $diDelais = collect($delaiParIncoterm)->pluck('delai_moyen')->values()->toArray();
+                $diColors = collect($delaiParIncoterm)->map(fn($r) => $r->delai_moyen > 0 ? '#ef4444' : '#22c55e')->values()->toArray();
+            @endphp
+            <div wire:key="chart-delai-incoterm-{{ $periode }}"
+                 x-data="{
+                     init() {
+                         new ApexCharts(this.$refs.chart, {
+                             chart: { type: 'bar', height: 260, toolbar: { show: false }, fontFamily: 'Instrument Sans, sans-serif' },
+                             plotOptions: { bar: { borderRadius: 4, columnWidth: '55%',
+                                 distributed: true } },
+                             series: [{ name: 'Délai moyen (j)', data: {{ json_encode($diDelais) }} }],
+                             xaxis: { categories: {{ json_encode($diLabels) }} },
+                             colors: {{ json_encode($diColors) }},
+                             legend: { show: false },
+                             dataLabels: { enabled: true,
+                                 formatter: v => (v > 0 ? '+' : '') + v + 'j',
+                                 style: { fontSize: '11px', colors: ['#475569'] } },
+                             yaxis: { labels: { formatter: v => (v > 0 ? '+' : '') + v + 'j' } },
+                             grid: { borderColor: '#f1f5f9' },
+                         }).render();
+                     }
+                 }" class="p-4">
+                <div x-ref="chart" style="min-height:260px"></div>
+            </div>
+            @endif
         </div>
         @endif
 
