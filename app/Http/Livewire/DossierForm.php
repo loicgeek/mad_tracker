@@ -22,45 +22,49 @@ class DossierForm extends Component
     public bool $isEdit = false;
     public int $currentStep = 1;
 
-    // ── Step 0 : Informations générales ──
+    // ── Step 1 : Informations générales ──
     public string $reference = '';
     public int    $user_id = 0;
     public int    $client_id = 0;
     public ?int   $fournisseur_id = null;
-    public string $numero_facture = '';
     public string $reference_affaire = '';
     public string $pays_destination = '';
     public string $incoterm = 'FCA_USINE';
     public string $incoterm_lieu = '';
     public string $categorie = '';
     public string $type_commande = '';
-    public ?int   $transporteur_id = null;
-    public string $transitaire_nom = '';
-    public string $transitaire_contact = '';
-    public string $poids = '';
-    public string $cout_transitaire = '';
-    public string $cout_reel = '';
 
-    // ── Step 1 : MAD Fournisseur ──
+    // ── Step 1 suite : MAD Fournisseur (fusionné avec infos générales) ──
     public string $mad_date_prevue = '';
     public string $mad_date_reelle = '';
     public bool   $mad_docs_recus = false;
     public bool   $mad_photos_recues = false;
-    public bool   $mad_coc_recu = false;
-    public string $mad_date_docs_recus = '';
+    public string $mad_date_validation_document = '';
     public string $mad_observations = '';
     public bool   $mad_complete = false;
 
     // ── Step 2 : Facturation ──
     public bool   $fact_emise = false;
     public string $fact_date = '';
-    public string $fact_numero = '';
+    public string $fact_numero_facture = '';
+    public string $fact_date_echeance = '';
+    public bool   $fact_coc_coo = false;
+    public bool   $fact_validation_client = false;
+    public string $fact_date_validation_facture = '';
     public bool   $fact_paiement_recu = false;
     public string $fact_date_paiement = '';
     public string $fact_montant = '';
     public string $fact_devise = 'EUR';
     public string $fact_observations = '';
     public bool   $fact_complete = false;
+
+    // ── Step 2 suite : Transporteur (dans facturation) ──
+    public ?int   $transporteur_id = null;
+    public string $transitaire_nom = '';
+    public string $transitaire_contact = '';
+    public string $poids = '';
+    public string $cout_transitaire = '';
+    public string $cout_reel = '';
 
     // ── Step 3 : Transitaire ──
     public bool   $trans_communique = false;
@@ -80,7 +84,7 @@ class DossierForm extends Component
     public string $liv_observations = '';
     public bool   $liv_complete = false;
 
-    // ── Step 5 : Clôture ──
+    // ── Step 4 suite : Clôture ──
     public bool   $clot_pod_recue = false;
     public string $clot_date_pod = '';
     public string $clot_reference = '';
@@ -92,24 +96,27 @@ class DossierForm extends Component
     {
         $uniqueRef = 'unique:dossiers,reference,' . ($this->isEdit ? ($this->dossier?->id ?? 'NULL') : 'NULL');
         return [
-            'reference'          => "required|string|max:255|{$uniqueRef}",
-            'user_id'            => 'required|exists:users,id',
-            'client_id'          => 'required|exists:clients,id',
-            'fournisseur_id'     => 'nullable|exists:fournisseurs,id',
-            'incoterm'           => 'required|in:FCA_USINE,FCA_TRANSITAIRE,CPT,CFR,EXW,AUTRES',
-            'type_commande'      => 'nullable|in:standard,projet',
-            'transporteur_id'    => 'nullable|exists:transporteurs,id',
-            'cout_reel'          => 'nullable|numeric|min:0',
-            'liv_motif_retard'   => 'nullable|string|max:500',
-            'mad_date_prevue'    => 'nullable|date',
-            'mad_date_reelle'    => 'nullable|date',
-            'fact_date'          => 'nullable|date',
-            'fact_date_paiement' => 'nullable|date',
-            'fact_montant'       => 'nullable|numeric',
-            'trans_date_enlevement' => 'nullable|date',
-            'liv_date_prevue'    => 'nullable|date',
-            'liv_date_reelle'    => 'nullable|date',
-            'clot_date_pod'      => 'nullable|date',
+            'reference'                   => "required|string|max:255|{$uniqueRef}",
+            'user_id'                     => 'required|exists:users,id',
+            'client_id'                   => 'required|exists:clients,id',
+            'fournisseur_id'              => 'nullable|exists:fournisseurs,id',
+            'incoterm'                    => 'required|in:FCA_USINE,FCA_TRANSITAIRE,CPT,CFR,EXW,AUTRES',
+            'type_commande'               => 'nullable|in:standard,projet',
+            'transporteur_id'             => 'nullable|exists:transporteurs,id',
+            'cout_reel'                   => 'nullable|numeric|min:0',
+            'liv_motif_retard'            => 'nullable|string|max:500',
+            'mad_date_prevue'             => 'nullable|date',
+            'mad_date_reelle'             => 'nullable|date',
+            'mad_date_validation_document'=> 'nullable|date',
+            'fact_date'                   => 'nullable|date',
+            'fact_date_echeance'          => 'nullable|date',
+            'fact_date_validation_facture'=> 'nullable|date',
+            'fact_date_paiement'          => 'nullable|date',
+            'fact_montant'                => 'nullable|numeric',
+            'trans_date_enlevement'       => 'nullable|date',
+            'liv_date_prevue'             => 'nullable|date',
+            'liv_date_reelle'             => 'nullable|date',
+            'clot_date_pod'               => 'nullable|date',
         ];
     }
 
@@ -117,14 +124,14 @@ class DossierForm extends Component
     {
         $this->user_id = Auth::id() ?? 1;
 
-    if ($id) {
-        $this->dossier = Dossier::with([
-            'etapeMadFournisseur','etapeFacturation',
-            'etapeTransitaire','etapeLivraison','etapeCloture',
-        ])->findOrFail($id);
-        $this->isEdit = true;
-        $this->fillFromModel();
-    }
+        if ($id) {
+            $this->dossier = Dossier::with([
+                'etapeMadFournisseur','etapeFacturation',
+                'etapeTransitaire','etapeLivraison','etapeCloture',
+            ])->findOrFail($id);
+            $this->isEdit = true;
+            $this->fillFromModel();
+        }
     }
 
     private function fillFromModel(): void
@@ -134,7 +141,6 @@ class DossierForm extends Component
         $this->user_id           = $d->user_id;
         $this->client_id         = $d->client_id;
         $this->fournisseur_id    = $d->fournisseur_id;
-        $this->numero_facture    = $d->numero_facture ?? '';
         $this->reference_affaire = $d->reference_affaire ?? '';
         $this->pays_destination  = $d->pays_destination ?? '';
         $this->incoterm          = $d->incoterm;
@@ -149,26 +155,29 @@ class DossierForm extends Component
         $this->cout_reel         = $d->cout_reel ?? '';
 
         if ($m = $d->etapeMadFournisseur) {
-            $this->mad_date_prevue    = $m->date_mad_prevue?->format('Y-m-d') ?? '';
-            $this->mad_date_reelle    = $m->date_mad_reelle?->format('Y-m-d') ?? '';
-            $this->mad_docs_recus     = $m->docs_recus;
-            $this->mad_photos_recues  = $m->photos_recues;
-            $this->mad_coc_recu       = $m->coc_recu;
-            $this->mad_date_docs_recus= $m->date_docs_recus?->format('Y-m-d') ?? '';
-            $this->mad_observations   = $m->observations ?? '';
-            $this->mad_complete       = $m->complete;
+            $this->mad_date_prevue               = $m->date_mad_prevue?->format('Y-m-d') ?? '';
+            $this->mad_date_reelle               = $m->date_mad_reelle?->format('Y-m-d') ?? '';
+            $this->mad_docs_recus                = $m->docs_recus;
+            $this->mad_photos_recues             = $m->photos_recues;
+            $this->mad_date_validation_document  = $m->date_validation_document?->format('Y-m-d') ?? '';
+            $this->mad_observations              = $m->observations ?? '';
+            $this->mad_complete                  = $m->complete;
         }
 
         if ($f = $d->etapeFacturation) {
-            $this->fact_emise          = $f->facture_emise;
-            $this->fact_date           = $f->date_facturation?->format('Y-m-d') ?? '';
-            $this->fact_numero         = $f->numero_facture_interne ?? '';
-            $this->fact_paiement_recu  = $f->paiement_recu;
-            $this->fact_date_paiement  = $f->date_paiement?->format('Y-m-d') ?? '';
-            $this->fact_montant        = $f->montant ?? '';
-            $this->fact_devise         = $f->devise ?? 'EUR';
-            $this->fact_observations   = $f->observations ?? '';
-            $this->fact_complete       = $f->complete;
+            $this->fact_emise                 = $f->facture_emise;
+            $this->fact_date                  = $f->date_facturation?->format('Y-m-d') ?? '';
+            $this->fact_numero_facture        = $f->numero_facture ?? '';
+            $this->fact_date_echeance         = $f->date_echeance_facture?->format('Y-m-d') ?? '';
+            $this->fact_coc_coo               = $f->coc_coo;
+            $this->fact_validation_client     = $f->validation_facture_client;
+            $this->fact_date_validation_facture = $f->date_validation_facture?->format('Y-m-d') ?? '';
+            $this->fact_paiement_recu         = $f->paiement_recu;
+            $this->fact_date_paiement         = $f->date_paiement?->format('Y-m-d') ?? '';
+            $this->fact_montant               = $f->montant ?? '';
+            $this->fact_devise                = $f->devise ?? 'EUR';
+            $this->fact_observations          = $f->observations ?? '';
+            $this->fact_complete              = $f->complete;
         }
 
         if ($t = $d->etapeTransitaire) {
@@ -206,13 +215,11 @@ class DossierForm extends Component
         $this->validate();
 
         DB::transaction(function () {
-            // Main dossier
             $data = [
                 'reference'        => $this->reference,
                 'user_id'          => $this->user_id,
                 'client_id'        => $this->client_id,
                 'fournisseur_id'   => $this->fournisseur_id ?: null,
-                'numero_facture'   => $this->numero_facture ?: null,
                 'reference_affaire'=> $this->reference_affaire ?: null,
                 'pays_destination' => $this->pays_destination ?: null,
                 'incoterm'         => $this->incoterm,
@@ -234,29 +241,32 @@ class DossierForm extends Component
                 $d = Dossier::create($data);
             }
 
-            // Étape 1
+            // Étape 1 — MAD Fournisseur
             $d->etapeMadFournisseur()->updateOrCreate(['dossier_id' => $d->id], [
-                'date_mad_prevue'   => $this->mad_date_prevue ?: null,
-                'date_mad_reelle'   => $this->mad_date_reelle ?: null,
-                'docs_recus'        => $this->mad_docs_recus,
-                'photos_recues'     => $this->mad_photos_recues,
-                'coc_recu'          => $this->mad_coc_recu,
-                'date_docs_recus'   => $this->mad_date_docs_recus ?: null,
-                'observations'      => $this->mad_observations ?: null,
-                'complete'          => $this->mad_complete,
+                'date_mad_prevue'          => $this->mad_date_prevue ?: null,
+                'date_mad_reelle'          => $this->mad_date_reelle ?: null,
+                'docs_recus'               => $this->mad_docs_recus,
+                'photos_recues'            => $this->mad_photos_recues,
+                'date_validation_document' => $this->mad_date_validation_document ?: null,
+                'observations'             => $this->mad_observations ?: null,
+                'complete'                 => $this->mad_complete,
             ]);
 
-            // Étape 2
+            // Étape 2 — Facturation
             $d->etapeFacturation()->updateOrCreate(['dossier_id' => $d->id], [
-                'facture_emise'          => $this->fact_emise,
-                'date_facturation'       => $this->fact_date ?: null,
-                'numero_facture_interne' => $this->fact_numero ?: null,
-                'paiement_recu'          => $this->fact_paiement_recu,
-                'date_paiement'          => $this->fact_date_paiement ?: null,
-                'montant'                => $this->fact_montant ?: null,
-                'devise'                 => $this->fact_devise,
-                'observations'           => $this->fact_observations ?: null,
-                'complete'               => $this->fact_complete,
+                'facture_emise'             => $this->fact_emise,
+                'date_facturation'          => $this->fact_date ?: null,
+                'numero_facture'            => $this->fact_numero_facture ?: null,
+                'date_echeance_facture'     => $this->fact_date_echeance ?: null,
+                'coc_coo'                   => $this->fact_coc_coo,
+                'validation_facture_client' => $this->fact_validation_client,
+                'date_validation_facture'   => $this->fact_date_validation_facture ?: null,
+                'paiement_recu'             => $this->fact_paiement_recu,
+                'date_paiement'             => $this->fact_date_paiement ?: null,
+                'montant'                   => $this->fact_montant ?: null,
+                'devise'                    => $this->fact_devise,
+                'observations'              => $this->fact_observations ?: null,
+                'complete'                  => $this->fact_complete,
             ]);
 
             // Calcul temps traitement
@@ -266,7 +276,7 @@ class DossierForm extends Component
                     ->diffInDays(now()->parse($this->trans_date_enlevement));
             }
 
-            // Étape 3
+            // Étape 3 — Transitaire
             $d->etapeTransitaire()->updateOrCreate(['dossier_id' => $d->id], [
                 'transitaire_communique'           => $this->trans_communique,
                 'date_reception_infos_transitaire' => $this->trans_date_reception ?: null,
@@ -277,7 +287,7 @@ class DossierForm extends Component
                 'complete'                         => $this->trans_complete,
             ]);
 
-            // Étape 4
+            // Étape 4 — Livraison
             $d->etapeLivraison()->updateOrCreate(['dossier_id' => $d->id], [
                 'date_livraison_prevue'  => $this->liv_date_prevue ?: null,
                 'date_livraison_reelle'  => $this->liv_date_reelle ?: null,
@@ -289,7 +299,7 @@ class DossierForm extends Component
                 'complete'               => $this->liv_complete,
             ]);
 
-            // Étape 5
+            // Étape 5 — Clôture
             $d->etapeCloture()->updateOrCreate(['dossier_id' => $d->id], [
                 'pod_recue'     => $this->clot_pod_recue,
                 'date_pod'      => $this->clot_date_pod ?: null,
@@ -309,7 +319,7 @@ class DossierForm extends Component
 
     public function nextStep(): void
     {
-        if ($this->currentStep < 5) $this->currentStep++;
+        if ($this->currentStep < 4) $this->currentStep++;
     }
 
     public function prevStep(): void

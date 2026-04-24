@@ -9,7 +9,7 @@
             <h2 class="text-2xl font-bold text-slate-900 font-mono">{{ $dossier->reference }}</h2>
             <p class="text-slate-500 text-sm mt-1">
                 {{ $dossier->reference_affaire }}
-                @if($dossier->numero_facture) · {{ $dossier->numero_facture }} @endif
+                @if($dossier->etapeFacturation?->numero_facture) · {{ $dossier->etapeFacturation->numero_facture }} @endif
             </p>
         </div>
         <div class="flex items-center gap-3">
@@ -242,10 +242,18 @@
                                     @endif
                                 </p>
                             @endif
+                            @if($mad->date_validation_document)
+                                <p>Validation docs : <strong>{{ $mad->date_validation_document->format('d/m/Y') }}</strong>
+                                    @if(!is_null($mad->ecart_validation))
+                                        <span @class(['font-semibold ml-1', 'text-red-600' => $mad->ecart_validation > 7, 'text-amber-600' => $mad->ecart_validation > 0 && $mad->ecart_validation <= 7, 'text-emerald-600' => $mad->ecart_validation <= 0])>
+                                            ({{ $mad->ecart_validation > 0 ? "+{$mad->ecart_validation}j" : "{$mad->ecart_validation}j" }})
+                                        </span>
+                                    @endif
+                                </p>
+                            @endif
                             <div class="flex gap-2 mt-1">
                                 <span @class(['badge badge-sm', 'badge-emerald' => $mad->docs_recus,   'badge-gray' => !$mad->docs_recus])>Docs</span>
                                 <span @class(['badge badge-sm', 'badge-emerald' => $mad->photos_recues,'badge-gray' => !$mad->photos_recues])>Photos</span>
-                                <span @class(['badge badge-sm', 'badge-emerald' => $mad->coc_recu,     'badge-gray' => !$mad->coc_recu])>COC</span>
                             </div>
                             @if($mad->observations)
                                 <p class="text-slate-600 italic">{{ $mad->observations }}</p>
@@ -282,12 +290,27 @@
                                     {{ $fact->facture_emise ? 'OUI' : 'NON' }}
                                 </span>
                             </p>
-                            @if($fact->date_facturation) <p>Date : <strong>{{ $fact->date_facturation->format('d/m/Y') }}</strong></p> @endif
+                            @if($fact->numero_facture) <p>N° facture : <strong>{{ $fact->numero_facture }}</strong></p> @endif
+                            @if($fact->date_facturation) <p>Date facturation : <strong>{{ $fact->date_facturation->format('d/m/Y') }}</strong></p> @endif
+                            @if($fact->date_echeance_facture)
+                                <p>Échéance : <strong @class(['text-red-600' => !$fact->paiement_recu && $fact->date_echeance_facture->isPast()])>
+                                    {{ $fact->date_echeance_facture->format('d/m/Y') }}
+                                </strong></p>
+                            @endif
                             @if($fact->montant) <p>Montant : <strong>{{ number_format($fact->montant, 2) }} {{ $fact->devise }}</strong></p> @endif
+                            @if($fact->coc_coo)
+                                <p><span class="badge badge-emerald badge-sm">COC / COO reçu</span></p>
+                            @endif
+                            @if($fact->validation_facture_client)
+                                <p>Validée client : <strong class="text-emerald-600">OUI</strong>
+                                    @if($fact->date_validation_facture) le <strong>{{ $fact->date_validation_facture->format('d/m/Y') }}</strong> @endif
+                                </p>
+                            @endif
                             <p>Paiement :
                                 <span @class(['font-semibold', 'text-emerald-600' => $fact->paiement_recu, 'text-amber-600' => !$fact->paiement_recu])>
                                     {{ $fact->paiement_recu ? 'Reçu' : 'En attente' }}
                                 </span>
+                                @if($fact->date_paiement) le <strong>{{ $fact->date_paiement->format('d/m/Y') }}</strong> @endif
                             </p>
                             @if($fact->observations) <p class="text-slate-600 italic">{{ $fact->observations }}</p> @endif
                         </div>

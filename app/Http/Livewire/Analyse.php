@@ -22,6 +22,8 @@ class Analyse extends Component
     public array $parTransporteur = [];
     public array $parType = [];
     public array $delaiParIncoterm = [];
+    public array $delaiValidationDocs = [];
+    public array $echeancierPaiements = [];
 
     public function mount(): void { $this->loadData(); }
     public function updatedPeriode(): void { $this->loadData(); }
@@ -167,6 +169,51 @@ class Analyse extends Component
                 $r->delai_moyen = $r->delai_moyen !== null ? round($r->delai_moyen, 1) : null;
                 return $r;
             })
+            ->toArray();
+
+        // Délais de validation des documents (écart MAD réelle → date validation document)
+        $this->delaiValidationDocs = DB::table('dossiers')
+            ->join('etape_mad_fournisseurs', 'etape_mad_fournisseurs.dossier_id', '=', 'dossiers.id')
+            ->where('dossiers.created_at', '>=', $since)
+            ->whereNull('dossiers.deleted_at')
+            ->whereNotNull('etape_mad_fournisseurs.date_mad_reelle')
+            ->whereNotNull('etape_mad_fournisseurs.date_validation_document')
+            ->select(
+                'dossiers.reference',
+                'dossiers.type_commande',
+                DB::raw('etape_mad_fournisseurs.date_mad_reelle as mad_reelle'),
+                DB::raw('etape_mad_fournisseurs.date_validation_document as date_validation'),
+                DB::raw('DATEDIFF(etape_mad_fournisseurs.date_validation_document, etape_mad_fournisseurs.date_mad_reelle) as ecart_jours'),
+            )
+            ->orderByDesc('dossiers.created_at')
+            ->limit(50)
+            ->get()
+            ->toArray();
+
+        // Analyse des échéanciers de paiements (écart échéance → date paiement)
+        $this->echeancierPaiements = DB::table('dossiers')
+            ->join('etape_facturations', 'etape_facturations.dossier_id', '=', 'dossiers.id')
+            ->join('clients', 'clients.id', '=', 'dossiers.client_id')
+            ->where('dossiers.created_at', '>=', $since)
+            ->whereNull('dossiers.deleted_at')
+            ->whereNotNull('etape_facturations.date_echeance_facture')
+            ->select(
+                'dossiers.reference',
+                'clients.nom as client',
+                DB::raw('etape_facturations.numero_facture'),
+                DB::raw('etape_facturations.montant'),
+                DB::raw('etape_facturations.devise'),
+                DB::raw('etape_facturations.date_facturation'),
+                DB::raw('etape_facturations.date_echeance_facture as date_echeance'),
+                DB::raw('etape_facturations.date_paiement'),
+                DB::raw('etape_facturations.paiement_recu'),
+                DB::raw('CASE WHEN etape_facturations.date_paiement IS NOT NULL
+                         THEN DATEDIFF(etape_facturations.date_paiement, etape_facturations.date_echeance_facture)
+                         ELSE DATEDIFF(CURRENT_DATE, etape_facturations.date_echeance_facture)
+                         END as ecart_echeance_jours'),
+            )
+            ->orderBy('etape_facturations.date_echeance_facture')
+            ->get()
             ->toArray();
 
         // Délai moyen par incoterm

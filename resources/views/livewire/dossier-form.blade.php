@@ -17,23 +17,18 @@
     {{-- ── Step navigator ──────────────────────────────────────── --}}
     @php
         /*
-         * 5 wizard steps, but only 4 are "étapes métier":
-         *   Step 1 — Infos générales  (no étape model, slate)
-         *   Step 2 — MAD Fournisseur  (blue)
-         *   Step 3 — Facturation      (purple)
-         *   Step 4 — Transitaire      (yellow)
-         *   Step 5 — Livraison & Clôture (combined: amber → teal)
-         *
-         * For step 5 "complete" we require both liv_complete AND clot_complete,
-         * matching recalculerStatut() which reaches 'finalise' only when
-         * etapeCloture->complete is true.
+         * 4 wizard steps:
+         *   Step 1 — Infos générales + MAD Fournisseur  (slate/blue)
+         *   Step 2 — Facturation                        (purple)
+         *   Step 3 — Transitaire                        (yellow)
+         *   Step 4 — Livraison & Clôture                (amber → teal)
          */
         $stepDefs = [
             1 => [
-                'label'            => 'Infos générales',
+                'label'            => 'Infos & MAD',
                 'sublabel'         => 'Général',
-                'complete'         => $client_id > 0 && $user_id > 0,
-                'hasData'          => $client_id > 0 || $user_id > 0,
+                'complete'         => $client_id > 0 && $user_id > 0 && $mad_complete,
+                'hasData'          => $client_id > 0 || $user_id > 0 || (bool)$mad_date_prevue,
                 'bubbleActive'     => 'bg-slate-700 border-slate-700 text-white ring-2 ring-slate-300',
                 'bubbleInProgress' => 'bg-slate-400 border-slate-400 text-white',
                 'borderTop'        => 'border-t-4 border-slate-600',
@@ -44,20 +39,6 @@
                 'checkAccent'      => 'accent-slate-600',
             ],
             2 => [
-                'label'            => 'MAD Fournisseur',
-                'sublabel'         => 'Étape 1',
-                'complete'         => $mad_complete,
-                'hasData'          => (bool)($mad_date_prevue || $mad_docs_recus || $mad_photos_recues || $mad_coc_recu),
-                'bubbleActive'     => 'bg-blue-600 border-blue-600 text-white ring-2 ring-blue-200',
-                'bubbleInProgress' => 'bg-blue-400 border-blue-400 text-white',
-                'borderTop'        => 'border-t-4 border-blue-500',
-                'headerBg'         => 'bg-blue-50 border-b border-blue-200',
-                'headerText'       => 'text-blue-800',
-                'labelActive'      => 'text-blue-700',
-                'connDone'         => 'bg-blue-300',
-                'checkAccent'      => 'accent-blue-600',
-            ],
-            3 => [
                 'label'            => 'Facturation',
                 'sublabel'         => 'Étape 2',
                 'complete'         => $fact_complete,
@@ -71,7 +52,7 @@
                 'connDone'         => 'bg-purple-300',
                 'checkAccent'      => 'accent-purple-600',
             ],
-            4 => [
+            3 => [
                 'label'            => 'Transitaire',
                 'sublabel'         => 'Étape 3',
                 'complete'         => $trans_complete,
@@ -85,25 +66,17 @@
                 'connDone'         => 'bg-yellow-300',
                 'checkAccent'      => 'accent-yellow-600',
             ],
-            5 => [
-                /*
-                 * Combined step. The bubble color shifts:
-                 *   - If clôture has data / is active → teal
-                 *   - Otherwise                       → amber (livraison phase)
-                 * "complete" requires both liv_complete AND clot_complete.
-                 */
+            4 => [
                 'label'            => 'Livraison & Clôture',
                 'sublabel'         => 'Étape 4',
                 'complete'         => $liv_complete && $clot_complete,
                 'hasData'          => (bool)($liv_date_prevue || $liv_awb || $clot_pod_recue || $clot_date_pod),
-                // Active bubble: teal if clôture touched, amber if only livraison
                 'bubbleActive'     => ($clot_pod_recue || $clot_date_pod || $clot_complete)
                                         ? 'bg-teal-600 border-teal-600 text-white ring-2 ring-teal-200'
                                         : 'bg-amber-500 border-amber-500 text-white ring-2 ring-amber-200',
                 'bubbleInProgress' => ($clot_pod_recue || $clot_date_pod)
                                         ? 'bg-teal-400 border-teal-400 text-white'
                                         : 'bg-amber-400 border-amber-400 text-white',
-                // Card border always teal (it's the "final" étape)
                 'borderTop'        => 'border-t-4 border-teal-500',
                 'headerBg'         => 'bg-teal-50 border-b border-teal-200',
                 'headerText'       => 'text-teal-800',
@@ -148,8 +121,7 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                                         </svg>
                                     @else
-                                        {{-- Show étape number (1-4) for steps 2-5, 0 for step 1 --}}
-                                        {{ $n === 1 ? '✦' : ($n - 1) }}
+                                        {{ $n === 1 ? '✦' : $n }}
                                     @endif
                                 </span>
 
@@ -185,157 +157,151 @@
     {{-- ── Step panels ─────────────────────────────────────────── --}}
     {{-- ═══════════════════════════════════════════════════════════ --}}
 
-    {{-- ══ Step 1 : Informations générales ═══════════════════════ --}}
+    {{-- ══ Step 1 : Informations générales + MAD Fournisseur ══════ --}}
     @if($currentStep === 1)
-    <div class="card {{ $current['borderTop'] }}">
-        <div class="card-header {{ $current['headerBg'] }}">
-            <h3 class="font-semibold {{ $current['headerText'] }}">Informations générales</h3>
-            <p class="text-xs text-slate-500 mt-0.5">Parties prenantes et paramètres du dossier.</p>
-        </div>
-        <div class="card-body space-y-5">
-            {{-- Référence EPS --}}
-            <div class="grid grid-cols-2 gap-5">
-                <div class="form-group">
-                    <label class="form-label">Référence EPS <span class="text-red-500">*</span></label>
-                    <input wire:model="reference" type="text" class="form-input font-mono"
-                           placeholder="Ex: EPS-2024-001">
-                    @error('reference') <p class="form-error">{{ $message }}</p> @enderror
+    <div class="space-y-5">
+
+        {{-- Bloc Informations générales --}}
+        <div class="card {{ $current['borderTop'] }}">
+            <div class="card-header {{ $current['headerBg'] }}">
+                <h3 class="font-semibold {{ $current['headerText'] }}">Informations générales</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Parties prenantes et paramètres du dossier.</p>
+            </div>
+            <div class="card-body space-y-5">
+                <div class="grid grid-cols-2 gap-5">
+                    <div class="form-group">
+                        <label class="form-label">Référence EPS <span class="text-red-500">*</span></label>
+                        <input wire:model="reference" type="text" class="form-input font-mono"
+                               placeholder="Ex: EPS-2024-001">
+                        @error('reference') <p class="form-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Type de commande</label>
+                        <select wire:model="type_commande" class="form-select">
+                            <option value="">— Sélectionner —</option>
+                            <option value="standard">Standard</option>
+                            <option value="projet">Projet</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Type de commande</label>
-                    <select wire:model="type_commande" class="form-select">
-                        <option value="">— Sélectionner —</option>
-                        <option value="standard">Standard</option>
-                        <option value="projet">Projet</option>
-                    </select>
+                <div class="grid grid-cols-2 gap-5">
+                    <div class="form-group">
+                        <label class="form-label">Responsable <span class="text-red-500">*</span></label>
+                        <select wire:model="user_id" class="form-select">
+                            <option value="">— Sélectionner —</option>
+                            @foreach($responsables as $u)
+                                <option value="{{ $u->id }}">{{ $u->nom_complet }} ({{ $u->initiales }})</option>
+                            @endforeach
+                        </select>
+                        @error('user_id') <p class="form-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Client <span class="text-red-500">*</span></label>
+                        <select wire:model="client_id" class="form-select">
+                            <option value="">— Sélectionner —</option>
+                            @foreach($clients as $c)
+                                <option value="{{ $c->id }}">{{ $c->nom }}@if($c->pays) ({{ $c->pays }})@endif</option>
+                            @endforeach
+                        </select>
+                        @error('client_id') <p class="form-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fournisseur</label>
+                        <select wire:model="fournisseur_id" class="form-select">
+                            <option value="">— Sélectionner —</option>
+                            @foreach($fournisseurs as $f)
+                                <option value="{{ $f->id }}">{{ $f->nom }}@if($f->pays) ({{ $f->pays }})@endif</option>
+                            @endforeach
+                        </select>
+                        @error('fournisseur_id') <p class="form-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Référence affaire</label>
+                        <input wire:model="reference_affaire" type="text" class="form-input" placeholder="190923-003AG">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Pays de destination</label>
+                        <input wire:model="pays_destination" type="text" class="form-input" placeholder="Cameroun">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Incoterm <span class="text-red-500">*</span></label>
+                        <select wire:model="incoterm" class="form-select">
+                            <option value="FCA_USINE">FCA Usine</option>
+                            <option value="FCA_TRANSITAIRE">FCA Transitaire</option>
+                            <option value="CPT">CPT</option>
+                            <option value="CFR">CFR</option>
+                            <option value="EXW">EXW</option>
+                            <option value="AUTRES">Autres</option>
+                        </select>
+                        @error('incoterm') <p class="form-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Lieu Incoterm</label>
+                        <input wire:model="incoterm_lieu" type="text" class="form-input" placeholder="FCA Transitaire France">
+                    </div>
                 </div>
             </div>
-            <div class="grid grid-cols-2 gap-5">
-                <div class="form-group">
-                    <label class="form-label">Responsable <span class="text-red-500">*</span></label>
-                    <select wire:model="user_id" class="form-select">
-                        <option value="">— Sélectionner —</option>
-                        @foreach($responsables as $u)
-                            <option value="{{ $u->id }}">{{ $u->nom_complet }} ({{ $u->initiales }})</option>
-                        @endforeach
-                    </select>
-                    @error('user_id') <p class="form-error">{{ $message }}</p> @enderror
+        </div>
+
+        {{-- Bloc MAD Fournisseur --}}
+        <div class="card border-t-4 border-blue-500">
+            <div class="card-header bg-blue-50 border-b border-blue-200">
+                <h3 class="font-semibold text-blue-800">Étape 1 — Mise à disposition Fournisseur</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Dates de mise à disposition et validation des documents.</p>
+            </div>
+            <div class="card-body space-y-5">
+
+                <div class="grid grid-cols-3 gap-5">
+                    <div class="form-group">
+                        <label class="form-label">Date MAD prévue</label>
+                        <input wire:model="mad_date_prevue" type="date" class="form-input">
+                        @error('mad_date_prevue') <p class="form-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date MAD réelle</label>
+                        <input wire:model="mad_date_reelle" type="date" class="form-input">
+                        @error('mad_date_reelle') <p class="form-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date validation document</label>
+                        <input wire:model="mad_date_validation_document" type="date" class="form-input">
+                        @error('mad_date_validation_document') <p class="form-error">{{ $message }}</p> @enderror
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Client <span class="text-red-500">*</span></label>
-                    <select wire:model="client_id" class="form-select">
-                        <option value="">— Sélectionner —</option>
-                        @foreach($clients as $c)
-                            <option value="{{ $c->id }}">{{ $c->nom }}@if($c->pays) ({{ $c->pays }})@endif</option>
-                        @endforeach
-                    </select>
-                    @error('client_id') <p class="form-error">{{ $message }}</p> @enderror
+
+                <div class="grid grid-cols-2 gap-4">
+                    <label class="flex items-center gap-3 p-4 rounded-xl border border-blue-200 bg-blue-50/50 cursor-pointer hover:bg-blue-50">
+                        <input wire:model="mad_docs_recus" type="checkbox" class="rounded accent-blue-600">
+                        <span class="text-sm font-medium text-slate-700">Documents reçus</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-4 rounded-xl border border-blue-200 bg-blue-50/50 cursor-pointer hover:bg-blue-50">
+                        <input wire:model="mad_photos_recues" type="checkbox" class="rounded accent-blue-600">
+                        <span class="text-sm font-medium text-slate-700">Photos reçues</span>
+                    </label>
                 </div>
+
                 <div class="form-group">
-                    <label class="form-label">N° de facture</label>
-                    <input wire:model="numero_facture" type="text" class="form-input" placeholder="DB20/xxx">
+                    <label class="form-label">Observations</label>
+                    <textarea wire:model="mad_observations" rows="3" class="form-textarea"
+                              placeholder="Notes sur la mise à disposition fournisseur…"></textarea>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Référence affaire</label>
-                    <input wire:model="reference_affaire" type="text" class="form-input" placeholder="190923-003AG">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Pays de destination</label>
-                    <input wire:model="pays_destination" type="text" class="form-input" placeholder="Cameroun">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Incoterm <span class="text-red-500">*</span></label>
-                    <select wire:model="incoterm" class="form-select">
-                        <option value="FCA_USINE">FCA Usine</option>
-                        <option value="FCA_TRANSITAIRE">FCA Transitaire</option>
-                        <option value="CPT">CPT</option>
-                        <option value="CFR">CFR</option>
-                        <option value="EXW">EXW</option>
-                        <option value="AUTRES">Autres</option>
-                    </select>
-                    @error('incoterm') <p class="form-error">{{ $message }}</p> @enderror
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Lieu Incoterm</label>
-                    <input wire:model="incoterm_lieu" type="text" class="form-input" placeholder="FCA Transitaire France">
-                </div>
+
+                <label class="flex items-center gap-3 p-3 rounded-xl border-2 border-blue-300 bg-blue-50 cursor-pointer">
+                    <input wire:model="mad_complete" type="checkbox" class="rounded accent-blue-600">
+                    <span class="text-sm font-semibold text-blue-800">Étape 1 complète ✓</span>
+                </label>
             </div>
         </div>
+
     </div>
     @endif
 
-    {{-- ══ Step 2 : MAD Fournisseur (Étape 1) ════════════════════ --}}
+    {{-- ══ Step 2 : Facturation (Étape 2) ════════════════════════ --}}
     @if($currentStep === 2)
     <div class="card {{ $current['borderTop'] }}">
         <div class="card-header {{ $current['headerBg'] }}">
-            <h3 class="font-semibold {{ $current['headerText'] }}">Étape 1 — Mise à disposition Fournisseur</h3>
-            <p class="text-xs text-slate-500 mt-0.5">Dates de mise à disposition et réception des documents.</p>
-        </div>
-        <div class="card-body space-y-5">
-
-            <div class="form-group">
-                <label class="form-label">Fournisseur</label>
-                <select wire:model="fournisseur_id" class="form-select">
-                    <option value="">— Sélectionner —</option>
-                    @foreach($fournisseurs as $f)
-                        <option value="{{ $f->id }}">{{ $f->nom }}@if($f->pays) ({{ $f->pays }})@endif</option>
-                    @endforeach
-                </select>
-                @error('fournisseur_id') <p class="form-error">{{ $message }}</p> @enderror
-            </div>
-
-            <div class="grid grid-cols-2 gap-5">
-                <div class="form-group">
-                    <label class="form-label">Date MAD prévue</label>
-                    <input wire:model="mad_date_prevue" type="date" class="form-input">
-                    @error('mad_date_prevue') <p class="form-error">{{ $message }}</p> @enderror
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Date MAD réelle</label>
-                    <input wire:model="mad_date_reelle" type="date" class="form-input">
-                    @error('mad_date_reelle') <p class="form-error">{{ $message }}</p> @enderror
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Date réception docs</label>
-                    <input wire:model="mad_date_docs_recus" type="date" class="form-input">
-                </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-4">
-                <label class="flex items-center gap-3 p-4 rounded-xl border border-blue-200 bg-blue-50/50 cursor-pointer hover:bg-blue-50">
-                    <input wire:model="mad_docs_recus" type="checkbox" class="rounded {{ $current['checkAccent'] }}">
-                    <span class="text-sm font-medium text-slate-700">Documents reçus</span>
-                </label>
-                <label class="flex items-center gap-3 p-4 rounded-xl border border-blue-200 bg-blue-50/50 cursor-pointer hover:bg-blue-50">
-                    <input wire:model="mad_photos_recues" type="checkbox" class="rounded {{ $current['checkAccent'] }}">
-                    <span class="text-sm font-medium text-slate-700">Photos reçues</span>
-                </label>
-                <label class="flex items-center gap-3 p-4 rounded-xl border border-blue-200 bg-blue-50/50 cursor-pointer hover:bg-blue-50">
-                    <input wire:model="mad_coc_recu" type="checkbox" class="rounded {{ $current['checkAccent'] }}">
-                    <span class="text-sm font-medium text-slate-700">COC reçu</span>
-                </label>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Observations</label>
-                <textarea wire:model="mad_observations" rows="3" class="form-textarea"
-                          placeholder="Notes sur la mise à disposition fournisseur…"></textarea>
-            </div>
-
-            <label class="flex items-center gap-3 p-3 rounded-xl border-2 border-blue-300 bg-blue-50 cursor-pointer">
-                <input wire:model="mad_complete" type="checkbox" class="rounded {{ $current['checkAccent'] }}">
-                <span class="text-sm font-semibold text-blue-800">Étape 1 complète ✓</span>
-            </label>
-        </div>
-    </div>
-    @endif
-
-    {{-- ══ Step 3 : Facturation (Étape 2) ════════════════════════ --}}
-    @if($currentStep === 3)
-    <div class="card {{ $current['borderTop'] }}">
-        <div class="card-header {{ $current['headerBg'] }}">
             <h3 class="font-semibold {{ $current['headerText'] }}">Étape 2 — Facturation</h3>
-            <p class="text-xs text-slate-500 mt-0.5">Facture émise et réception du paiement.</p>
+            <p class="text-xs text-slate-500 mt-0.5">Émission de la facture et suivi des paiements.</p>
         </div>
         <div class="card-body space-y-5">
 
@@ -343,6 +309,44 @@
                 <input wire:model="fact_emise" type="checkbox" class="rounded {{ $current['checkAccent'] }}">
                 <span class="text-sm font-medium text-slate-700">Facture émise</span>
             </label>
+
+            <div class="grid grid-cols-2 gap-5">
+                <div class="form-group">
+                    <label class="form-label">N° de facture</label>
+                    <input wire:model="fact_numero_facture" type="text" class="form-input" placeholder="DB20/xxx">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date facturation</label>
+                    <input wire:model="fact_date" type="date" class="form-input">
+                    @error('fact_date') <p class="form-error">{{ $message }}</p> @enderror
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date d'échéance facture</label>
+                    <input wire:model="fact_date_echeance" type="date" class="form-input">
+                    @error('fact_date_echeance') <p class="form-error">{{ $message }}</p> @enderror
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Montant</label>
+                    <input wire:model="fact_montant" type="number" step="0.01" class="form-input">
+                    @error('fact_montant') <p class="form-error">{{ $message }}</p> @enderror
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Devise</label>
+                    <select wire:model="fact_devise" class="form-select">
+                        <option value="EUR">EUR €</option>
+                        <option value="USD">USD $</option>
+                        <option value="XAF">XAF FCFA</option>
+                        <option value="GBP">GBP £</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <label class="flex items-center gap-3 p-4 rounded-xl border border-purple-200 bg-purple-50/50 cursor-pointer hover:bg-purple-50">
+                    <input wire:model="fact_coc_coo" type="checkbox" class="rounded {{ $current['checkAccent'] }}">
+                    <span class="text-sm font-medium text-slate-700">COC / COO reçu</span>
+                </label>
+            </div>
 
             <hr class="border-slate-100">
 
@@ -378,38 +382,34 @@
 
             <hr class="border-slate-100">
 
-            <div class="grid grid-cols-2 gap-5">
-                <div class="form-group">
-                    <label class="form-label">Date facturation</label>
-                    <input wire:model="fact_date" type="date" class="form-input">
-                    @error('fact_date') <p class="form-error">{{ $message }}</p> @enderror
+            {{-- Section 4c : Validation facture par le client --}}
+            <div class="rounded-xl border border-purple-200 bg-purple-50/30 p-4 space-y-4">
+                <p class="text-sm font-semibold text-purple-800">Étape 4c — Validation facture par le client</p>
+
+                <div class="grid grid-cols-2 gap-5">
+                    <label class="flex items-center gap-3 p-4 rounded-xl border border-purple-200 bg-white cursor-pointer hover:bg-purple-50 col-span-2">
+                        <input wire:model="fact_validation_client" type="checkbox" class="rounded {{ $current['checkAccent'] }}">
+                        <span class="text-sm font-medium text-slate-700">Facture validée par le client</span>
+                    </label>
+                    <div class="form-group">
+                        <label class="form-label">Date validation facture</label>
+                        <input wire:model="fact_date_validation_facture" type="date" class="form-input">
+                        @error('fact_date_validation_facture') <p class="form-error">{{ $message }}</p> @enderror
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">N° facture interne</label>
-                    <input wire:model="fact_numero" type="text" class="form-input">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Montant</label>
-                    <input wire:model="fact_montant" type="number" step="0.01" class="form-input">
-                    @error('fact_montant') <p class="form-error">{{ $message }}</p> @enderror
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Devise</label>
-                    <select wire:model="fact_devise" class="form-select">
-                        <option value="EUR">EUR €</option>
-                        <option value="USD">USD $</option>
-                        <option value="XAF">XAF FCFA</option>
-                        <option value="GBP">GBP £</option>
-                    </select>
-                </div>
-                <label class="flex items-center gap-3 p-4 rounded-xl border border-purple-200 bg-purple-50/50 cursor-pointer hover:bg-purple-50 col-span-2">
-                    <input wire:model="fact_paiement_recu" type="checkbox" class="rounded {{ $current['checkAccent'] }}">
-                    <span class="text-sm font-medium text-slate-700">Paiement client reçu</span>
-                </label>
-                <div class="form-group">
-                    <label class="form-label">Date paiement</label>
-                    <input wire:model="fact_date_paiement" type="date" class="form-input">
-                    @error('fact_date_paiement') <p class="form-error">{{ $message }}</p> @enderror
+
+                <hr class="border-purple-100">
+
+                <div class="grid grid-cols-2 gap-5">
+                    <label class="flex items-center gap-3 p-4 rounded-xl border border-purple-200 bg-white cursor-pointer hover:bg-purple-50 col-span-2">
+                        <input wire:model="fact_paiement_recu" type="checkbox" class="rounded {{ $current['checkAccent'] }}">
+                        <span class="text-sm font-medium text-slate-700">Paiement client reçu</span>
+                    </label>
+                    <div class="form-group">
+                        <label class="form-label">Date paiement</label>
+                        <input wire:model="fact_date_paiement" type="date" class="form-input">
+                        @error('fact_date_paiement') <p class="form-error">{{ $message }}</p> @enderror
+                    </div>
                 </div>
             </div>
 
@@ -426,8 +426,8 @@
     </div>
     @endif
 
-    {{-- ══ Step 4 : Transitaire (Étape 3) ════════════════════════ --}}
-    @if($currentStep === 4)
+    {{-- ══ Step 3 : Transitaire (Étape 3) ════════════════════════ --}}
+    @if($currentStep === 3)
     <div class="card {{ $current['borderTop'] }}">
         <div class="card-header {{ $current['headerBg'] }}">
             <h3 class="font-semibold {{ $current['headerText'] }}">Étape 3 — Coordination Transitaire</h3>
@@ -469,8 +469,8 @@
     </div>
     @endif
 
-    {{-- ══ Step 5 : Livraison + Clôture (Étape 4) ════════════════ --}}
-    @if($currentStep === 5)
+    {{-- ══ Step 4 : Livraison + Clôture (Étape 4) ════════════════ --}}
+    @if($currentStep === 4)
     <div class="space-y-5">
 
         {{-- Livraison — amber --}}
@@ -584,7 +584,7 @@
         </div>
         <div class="flex items-center gap-3">
             <a href="{{ route('dossiers.index') }}" class="btn-ghost">Annuler</a>
-            @if($currentStep < 5)
+            @if($currentStep < 4)
                 <button wire:click="nextStep" type="button" class="btn-secondary">Suivant →</button>
             @endif
             <button wire:click="save" type="button" class="btn-primary">

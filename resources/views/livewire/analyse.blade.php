@@ -554,4 +554,172 @@
 
     </div>
 
+    {{-- ── Délais de validation des documents ────────────────────── --}}
+    @if(count($delaiValidationDocs) > 0)
+    <div class="card">
+        <div class="card-header">
+            <h3 class="font-semibold text-slate-800">Délais de validation des documents</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Écart entre la date MAD réelle et la date de validation des documents.</p>
+        </div>
+        @if($viewMode === 'table')
+        <div class="table-wrapper rounded-none rounded-b-xl border-0">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Référence</th>
+                        <th>Type</th>
+                        <th class="text-right">MAD réelle</th>
+                        <th class="text-right">Date validation</th>
+                        <th class="text-right">Écart (j)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($delaiValidationDocs as $r)
+                    <tr>
+                        <td class="font-mono text-xs font-medium text-slate-700">{{ $r->reference }}</td>
+                        <td>
+                            <span class="badge {{ $r->type_commande === 'projet' ? 'badge-purple' : 'badge-gray' }} capitalize text-xs">
+                                {{ $r->type_commande ?? '—' }}
+                            </span>
+                        </td>
+                        <td class="text-right text-xs text-slate-600">{{ $r->mad_reelle ? \Carbon\Carbon::parse($r->mad_reelle)->format('d/m/Y') : '—' }}</td>
+                        <td class="text-right text-xs text-slate-600">{{ $r->date_validation ? \Carbon\Carbon::parse($r->date_validation)->format('d/m/Y') : '—' }}</td>
+                        <td class="text-right">
+                            @if($r->ecart_jours !== null)
+                                <span class="font-semibold {{ $r->ecart_jours > 7 ? 'text-red-500' : ($r->ecart_jours > 0 ? 'text-amber-600' : 'text-emerald-600') }}">
+                                    {{ $r->ecart_jours > 0 ? '+' : '' }}{{ $r->ecart_jours }}j
+                                </span>
+                            @else
+                                <span class="text-slate-400">—</span>
+                            @endif
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+                <tfoot class="bg-slate-50">
+                    <tr>
+                        <td colspan="4" class="text-right text-xs font-semibold text-slate-600 py-2 px-4">Écart moyen</td>
+                        <td class="text-right text-xs font-bold py-2 px-4">
+                            @php $moyValid = collect($delaiValidationDocs)->avg('ecart_jours'); @endphp
+                            <span class="{{ $moyValid > 7 ? 'text-red-500' : 'text-slate-700' }}">
+                                {{ $moyValid !== null ? (round($moyValid, 1) > 0 ? '+' : '') . round($moyValid, 1) . 'j' : '—' }}
+                            </span>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        @else
+        @php
+            $dvRefs   = collect($delaiValidationDocs)->pluck('reference')->values()->toArray();
+            $dvEcarts = collect($delaiValidationDocs)->pluck('ecart_jours')->map(fn($v) => (int)$v)->values()->toArray();
+            $dvColors = collect($dvEcarts)->map(fn($v) => $v > 7 ? '#ef4444' : ($v > 0 ? '#f59e0b' : '#22c55e'))->values()->toArray();
+        @endphp
+        <div wire:key="chart-validation-docs-{{ $periode }}"
+             x-data="{
+                 init() {
+                     new ApexCharts(this.$refs.chart, {
+                         chart: { type: 'bar', height: 300, toolbar: { show: false }, fontFamily: 'Instrument Sans, sans-serif' },
+                         plotOptions: { bar: { horizontal: true, borderRadius: 3, barHeight: '60%', distributed: true } },
+                         series: [{ name: 'Écart (j)', data: {{ json_encode($dvEcarts) }} }],
+                         xaxis: { categories: {{ json_encode($dvRefs) }}, labels: { formatter: v => (v > 0 ? '+' : '') + v + 'j' } },
+                         colors: {{ json_encode($dvColors) }},
+                         legend: { show: false },
+                         dataLabels: { enabled: true, formatter: v => (v > 0 ? '+' : '') + v + 'j',
+                             offsetX: 20, style: { fontSize: '11px', colors: ['#475569'] } },
+                         grid: { borderColor: '#f1f5f9' },
+                     }).render();
+                 }
+             }" class="p-4">
+            <div x-ref="chart" style="min-height:300px"></div>
+        </div>
+        @endif
+    </div>
+    @endif
+
+    {{-- ── Échéancier des paiements ────────────────────────────────── --}}
+    @if(count($echeancierPaiements) > 0)
+    <div class="card">
+        <div class="card-header">
+            <h3 class="font-semibold text-slate-800">Échéancier des paiements</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Suivi des factures et respect des délais de paiement.</p>
+        </div>
+        <div class="table-wrapper rounded-none rounded-b-xl border-0">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Dossier</th>
+                        <th>Client</th>
+                        <th>N° Facture</th>
+                        <th class="text-right">Montant</th>
+                        <th class="text-right">Date facture</th>
+                        <th class="text-right">Échéance</th>
+                        <th class="text-right">Date paiement</th>
+                        <th class="text-right">Statut</th>
+                        <th class="text-right">Écart</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($echeancierPaiements as $r)
+                    <tr>
+                        <td class="font-mono text-xs font-medium text-slate-700">{{ $r->reference }}</td>
+                        <td class="text-sm text-slate-700">{{ $r->client }}</td>
+                        <td class="text-xs text-slate-600">{{ $r->numero_facture ?? '—' }}</td>
+                        <td class="text-right text-xs font-medium">
+                            {{ $r->montant ? number_format($r->montant, 0, ',', ' ').' '.($r->devise ?? 'EUR') : '—' }}
+                        </td>
+                        <td class="text-right text-xs text-slate-600">{{ $r->date_facturation ? \Carbon\Carbon::parse($r->date_facturation)->format('d/m/Y') : '—' }}</td>
+                        <td class="text-right text-xs {{ (!$r->paiement_recu && \Carbon\Carbon::parse($r->date_echeance)->isPast()) ? 'text-red-600 font-semibold' : 'text-slate-600' }}">
+                            {{ \Carbon\Carbon::parse($r->date_echeance)->format('d/m/Y') }}
+                        </td>
+                        <td class="text-right text-xs text-slate-600">
+                            {{ $r->date_paiement ? \Carbon\Carbon::parse($r->date_paiement)->format('d/m/Y') : '—' }}
+                        </td>
+                        <td class="text-right">
+                            @if($r->paiement_recu)
+                                <span class="badge badge-emerald">Payé</span>
+                            @elseif(\Carbon\Carbon::parse($r->date_echeance)->isPast())
+                                <span class="badge badge-red">En retard</span>
+                            @else
+                                <span class="badge badge-gray">En attente</span>
+                            @endif
+                        </td>
+                        <td class="text-right">
+                            @if($r->ecart_echeance_jours !== null)
+                                @php $ecart = (int)$r->ecart_echeance_jours; @endphp
+                                <span class="font-semibold text-xs {{ $ecart > 0 ? 'text-red-500' : 'text-emerald-600' }}">
+                                    {{ $ecart > 0 ? '+' : '' }}{{ $ecart }}j
+                                </span>
+                            @else
+                                <span class="text-slate-400">—</span>
+                            @endif
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+                @php
+                    $totalNonPaye = collect($echeancierPaiements)->where('paiement_recu', 0)->sum('montant');
+                    $totalEnRetard = collect($echeancierPaiements)->filter(fn($r) => !$r->paiement_recu && \Carbon\Carbon::parse($r->date_echeance)->isPast())->sum('montant');
+                @endphp
+                <tfoot class="bg-slate-50">
+                    <tr>
+                        <td colspan="3" class="text-right text-xs font-semibold text-slate-600 py-2 px-4">
+                            Total non payé
+                        </td>
+                        <td class="text-right text-xs font-bold py-2 px-4 text-amber-600">
+                            {{ $totalNonPaye > 0 ? number_format($totalNonPaye, 0, ',', ' ').' €' : '—' }}
+                        </td>
+                        <td colspan="4" class="text-right text-xs font-semibold text-slate-600 py-2 px-4">
+                            Dont en retard
+                        </td>
+                        <td class="text-right text-xs font-bold py-2 px-4 text-red-500">
+                            {{ $totalEnRetard > 0 ? number_format($totalEnRetard, 0, ',', ' ').' €' : '—' }}
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+    @endif
+
 </div>
