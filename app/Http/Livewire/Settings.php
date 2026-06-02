@@ -35,7 +35,7 @@ class Settings extends Component
 
     public function mount(): void
     {
-        $this->dg_email               = Setting::get('dg_email', '');
+        $this->dg_email               = Setting::get('dg_email') ?? '';
         $this->validation_delai_jours = Setting::get('validation_delai_jours', '5');
         $this->app_nom                = Setting::get('app_nom', 'MAD Tracker');
     }
