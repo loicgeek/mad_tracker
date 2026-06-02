@@ -25,7 +25,7 @@ class Dossier extends Model
         'statut',
         'alerte_retard_mad', 'alerte_facture_manquante',
         'alerte_transitaire_manquant', 'alerte_pod_manquante',
-        'alerte_livraison_depassee',
+        'alerte_livraison_depassee', 'alerte_cout_reel_manquant',
     ];
 
     protected $casts = [
@@ -37,6 +37,7 @@ class Dossier extends Model
         'alerte_transitaire_manquant'  => 'boolean',
         'alerte_pod_manquante'         => 'boolean',
         'alerte_livraison_depassee'    => 'boolean',
+        'alerte_cout_reel_manquant'    => 'boolean',
     ];
 
     // ── Relations ──────────────────────────────────────────────────
@@ -170,7 +171,8 @@ class Dossier extends Model
             || $this->alerte_facture_manquante
             || $this->alerte_transitaire_manquant
             || $this->alerte_pod_manquante
-            || $this->alerte_livraison_depassee;
+            || $this->alerte_livraison_depassee
+            || $this->alerte_cout_reel_manquant;
     }
 
     public function getIncotermLabelAttribute(): string
@@ -208,20 +210,25 @@ class Dossier extends Model
             && $fact
             && ! $fact->facture_emise;
 
+        // Transitaire manquant = facture émise mais pas de transporteur renseigné
         $this->alerte_transitaire_manquant = $fact
-            && $fact->complete
-            && $trans
-            && ! $trans->transitaire_communique;
+            && $fact->facture_emise
+            && ! $this->transporteur_id;
 
         $this->alerte_livraison_depassee = $liv
             && $liv->date_livraison_prevue
             && ! $liv->date_livraison_reelle
             && $liv->date_livraison_prevue < $today;
 
-        $this->alerte_pod_manquante = $trans
-            && $trans->complete
+        // Alerte POD si 4a (livraison) complète mais 4b (clôture/POD) pas renseignée
+        $this->alerte_pod_manquante = $liv
+            && $liv->complete
             && $clot
             && ! $clot->pod_recue;
+
+        // Coût réel manquant = transporteur renseigné mais coût réel absent
+        $this->alerte_cout_reel_manquant = $this->transporteur_id
+            && (! $this->cout_reel || $this->cout_reel == 0);
 
         $this->saveQuietly();
     }
@@ -257,6 +264,21 @@ class Dossier extends Model
                 nouveauStatutLabel: $this->statut_label,
                 actionSuggeree:     $this->action_suggeree,
             ));
+        }
+
+        // Mail DG lorsque POD (4b) est renseignée pour la première fois
+        $clot = $this->etapeCloture;
+        if ($clot && $clot->pod_recue && $this->statut === 'finalise' && $ancienStatut !== 'finalise') {
+            $dgEmail = \App\Models\Setting::get('dg_email');
+            if ($dgEmail) {
+                \Illuminate\Support\Facades\Notification::route('mail', $dgEmail)
+                    ->notify(new \App\Notifications\PodRecueDG(
+                        dossierId: $this->id,
+                        reference: $this->reference,
+                        clientNom: $this->client?->nom ?? '—',
+                        datePod:   $clot->date_pod?->format('d/m/Y') ?? '—',
+                    ));
+            }
         }
     }
 

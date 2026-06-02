@@ -54,6 +54,9 @@ Route::middleware('auth')->group(function () {
         return \Maatwebsite\Excel\Facades\Excel::download($export, "template-{$type}.xlsx");
     })->name('import.template');
 
+    // Paramètres
+    Route::get('/parametres', \App\Http\Livewire\Settings::class)->name('settings');
+
     // Exports
     Route::get('/export/dossiers', [ExportController::class, 'dossiers'])->name('export.dossiers');
     Route::get('/export/analyses', [ExportController::class, 'analyses'])->name('export.analyses');

@@ -36,10 +36,14 @@ class DossierForm extends Component
 
     // ── Step 1 suite : MAD Fournisseur (fusionné avec infos générales) ──
     public string $mad_date_prevue = '';
+    public string $mad_date_fournisseur = '';
     public string $mad_date_reelle = '';
     public bool   $mad_docs_recus = false;
     public bool   $mad_photos_recues = false;
     public string $mad_date_validation_document = '';
+    public string $mad_date_demande_validation = '';
+    public string $mad_date_reception_validation = '';
+    public int    $mad_delai_validation_jours = 5;
     public string $mad_observations = '';
     public bool   $mad_complete = false;
 
@@ -49,14 +53,19 @@ class DossierForm extends Component
     public string $fact_numero_facture = '';
     public string $fact_date_echeance = '';
     public bool   $fact_coc_coo = false;
+    public string $fact_montant_client = '';
+    public string $fact_devise_client = 'EUR';
+    public string $fact_montant_fournisseur = '';
+    public string $fact_devise_fournisseur = 'EUR';
+    public string $fact_taux_change = '';
+    public string $fact_observations = '';
+    public bool   $fact_complete = false;
+
+    // ── Step 5 (4c) : Validation facture client + paiement ──
     public bool   $fact_validation_client = false;
     public string $fact_date_validation_facture = '';
     public bool   $fact_paiement_recu = false;
     public string $fact_date_paiement = '';
-    public string $fact_montant = '';
-    public string $fact_devise = 'EUR';
-    public string $fact_observations = '';
-    public bool   $fact_complete = false;
 
     // ── Step 2 suite : Transporteur (dans facturation) ──
     public ?int   $transporteur_id = null;
@@ -105,14 +114,20 @@ class DossierForm extends Component
             'transporteur_id'             => 'nullable|exists:transporteurs,id',
             'cout_reel'                   => 'nullable|numeric|min:0',
             'liv_motif_retard'            => 'nullable|string|max:500',
-            'mad_date_prevue'             => 'nullable|date',
-            'mad_date_reelle'             => 'nullable|date',
-            'mad_date_validation_document'=> 'nullable|date',
-            'fact_date'                   => 'nullable|date',
-            'fact_date_echeance'          => 'nullable|date',
-            'fact_date_validation_facture'=> 'nullable|date',
-            'fact_date_paiement'          => 'nullable|date',
-            'fact_montant'                => 'nullable|numeric',
+            'mad_date_prevue'              => 'nullable|date',
+            'mad_date_fournisseur'         => 'nullable|date',
+            'mad_date_reelle'              => 'nullable|date',
+            'mad_date_validation_document' => 'nullable|date',
+            'mad_date_demande_validation'  => 'nullable|date',
+            'mad_date_reception_validation'=> 'nullable|date',
+            'mad_delai_validation_jours'   => 'nullable|integer|min:1|max:365',
+            'fact_date'                    => 'nullable|date',
+            'fact_date_echeance'           => 'nullable|date',
+            'fact_date_validation_facture' => 'nullable|date',
+            'fact_date_paiement'           => 'nullable|date',
+            'fact_montant_client'          => 'nullable|numeric',
+            'fact_montant_fournisseur'     => 'nullable|numeric',
+            'fact_taux_change'             => 'nullable|numeric|min:0',
             'trans_date_enlevement'       => 'nullable|date',
             'liv_date_prevue'             => 'nullable|date',
             'liv_date_reelle'             => 'nullable|date',
@@ -156,10 +171,14 @@ class DossierForm extends Component
 
         if ($m = $d->etapeMadFournisseur) {
             $this->mad_date_prevue               = $m->date_mad_prevue?->format('Y-m-d') ?? '';
+            $this->mad_date_fournisseur          = $m->date_mad_fournisseur?->format('Y-m-d') ?? '';
             $this->mad_date_reelle               = $m->date_mad_reelle?->format('Y-m-d') ?? '';
             $this->mad_docs_recus                = $m->docs_recus;
             $this->mad_photos_recues             = $m->photos_recues;
             $this->mad_date_validation_document  = $m->date_validation_document?->format('Y-m-d') ?? '';
+            $this->mad_date_demande_validation   = $m->date_demande_validation?->format('Y-m-d') ?? '';
+            $this->mad_date_reception_validation = $m->date_reception_validation?->format('Y-m-d') ?? '';
+            $this->mad_delai_validation_jours    = $m->delai_validation_jours ?? 5;
             $this->mad_observations              = $m->observations ?? '';
             $this->mad_complete                  = $m->complete;
         }
@@ -170,12 +189,15 @@ class DossierForm extends Component
             $this->fact_numero_facture        = $f->numero_facture ?? '';
             $this->fact_date_echeance         = $f->date_echeance_facture?->format('Y-m-d') ?? '';
             $this->fact_coc_coo               = $f->coc_coo;
+            $this->fact_montant_client        = $f->montant_client ?? ($f->montant ?? '');
+            $this->fact_devise_client         = $f->devise_client ?? ($f->devise ?? 'EUR');
+            $this->fact_montant_fournisseur   = $f->montant_fournisseur ?? '';
+            $this->fact_devise_fournisseur    = $f->devise_fournisseur ?? 'EUR';
+            $this->fact_taux_change           = $f->taux_change ?? '';
             $this->fact_validation_client     = $f->validation_facture_client;
             $this->fact_date_validation_facture = $f->date_validation_facture?->format('Y-m-d') ?? '';
             $this->fact_paiement_recu         = $f->paiement_recu;
             $this->fact_date_paiement         = $f->date_paiement?->format('Y-m-d') ?? '';
-            $this->fact_montant               = $f->montant ?? '';
-            $this->fact_devise                = $f->devise ?? 'EUR';
             $this->fact_observations          = $f->observations ?? '';
             $this->fact_complete              = $f->complete;
         }
@@ -239,18 +261,44 @@ class DossierForm extends Component
                 $d = $this->dossier;
             } else {
                 $d = Dossier::create($data);
+                // Notifier le responsable de l'attribution
+                if ($d->user) {
+                    $d->user->notify(new \App\Notifications\DossierAttribue(
+                        dossierId: $d->id,
+                        reference: $d->reference,
+                        clientNom: $d->client?->nom ?? '—',
+                    ));
+                }
             }
 
+            $isNew = ! $this->isEdit;
+
             // Étape 1 — MAD Fournisseur
-            $d->etapeMadFournisseur()->updateOrCreate(['dossier_id' => $d->id], [
-                'date_mad_prevue'          => $this->mad_date_prevue ?: null,
-                'date_mad_reelle'          => $this->mad_date_reelle ?: null,
-                'docs_recus'               => $this->mad_docs_recus,
-                'photos_recues'            => $this->mad_photos_recues,
-                'date_validation_document' => $this->mad_date_validation_document ?: null,
-                'observations'             => $this->mad_observations ?: null,
-                'complete'                 => $this->mad_complete,
-            ]);
+            $prevMad = $d->etapeMadFournisseur?->date_reception_validation;
+            $madData = [
+                'date_mad_prevue'           => $this->mad_date_prevue ?: null,
+                'date_mad_fournisseur'      => $this->mad_date_fournisseur ?: null,
+                'date_mad_reelle'           => $this->mad_date_reelle ?: null,
+                'docs_recus'                => $this->mad_docs_recus,
+                'photos_recues'             => $this->mad_photos_recues,
+                'date_validation_document'  => $this->mad_date_validation_document ?: null,
+                'date_demande_validation'   => $this->mad_date_demande_validation ?: null,
+                'date_reception_validation' => $this->mad_date_reception_validation ?: null,
+                'delai_validation_jours'    => $this->mad_delai_validation_jours ?: 5,
+                'observations'              => $this->mad_observations ?: null,
+                'complete'                  => $this->mad_complete,
+            ];
+            $d->etapeMadFournisseur()->updateOrCreate(['dossier_id' => $d->id], $madData);
+
+            // Notifier si la date de réception de validation vient d'être saisie
+            if ($this->mad_date_reception_validation && ! $prevMad && $d->user) {
+                $d->user->notify(new \App\Notifications\ValidationDocumentRecu(
+                    dossierId:     $d->id,
+                    reference:     $d->reference,
+                    clientNom:     $d->client?->nom ?? '—',
+                    dateReception: now()->parse($this->mad_date_reception_validation)->format('d/m/Y'),
+                ));
+            }
 
             // Étape 2 — Facturation
             $d->etapeFacturation()->updateOrCreate(['dossier_id' => $d->id], [
@@ -259,12 +307,15 @@ class DossierForm extends Component
                 'numero_facture'            => $this->fact_numero_facture ?: null,
                 'date_echeance_facture'     => $this->fact_date_echeance ?: null,
                 'coc_coo'                   => $this->fact_coc_coo,
+                'montant_client'            => $this->fact_montant_client ?: null,
+                'devise_client'             => $this->fact_devise_client,
+                'montant_fournisseur'       => $this->fact_montant_fournisseur ?: null,
+                'devise_fournisseur'        => $this->fact_devise_fournisseur,
+                'taux_change'               => $this->fact_taux_change ?: null,
                 'validation_facture_client' => $this->fact_validation_client,
                 'date_validation_facture'   => $this->fact_date_validation_facture ?: null,
                 'paiement_recu'             => $this->fact_paiement_recu,
                 'date_paiement'             => $this->fact_date_paiement ?: null,
-                'montant'                   => $this->fact_montant ?: null,
-                'devise'                    => $this->fact_devise,
                 'observations'              => $this->fact_observations ?: null,
                 'complete'                  => $this->fact_complete,
             ]);
@@ -319,7 +370,7 @@ class DossierForm extends Component
 
     public function nextStep(): void
     {
-        if ($this->currentStep < 4) $this->currentStep++;
+        if ($this->currentStep < 5) $this->currentStep++;
     }
 
     public function prevStep(): void

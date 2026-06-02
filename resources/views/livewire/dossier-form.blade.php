@@ -17,11 +17,12 @@
     {{-- ── Step navigator ──────────────────────────────────────── --}}
     @php
         /*
-         * 4 wizard steps:
+         * 5 wizard steps:
          *   Step 1 — Infos générales + MAD Fournisseur  (slate/blue)
          *   Step 2 — Facturation                        (purple)
          *   Step 3 — Transitaire                        (yellow)
-         *   Step 4 — Livraison & Clôture                (amber → teal)
+         *   Step 4 — Livraison & Clôture (4a + 4b)     (amber → teal)
+         *   Step 5 — Validation facture client (4c)     (indigo)
          */
         $stepDefs = [
             1 => [
@@ -42,7 +43,7 @@
                 'label'            => 'Facturation',
                 'sublabel'         => 'Étape 2',
                 'complete'         => $fact_complete,
-                'hasData'          => (bool)($fact_emise || $fact_date || $fact_montant),
+                'hasData'          => (bool)($fact_emise || $fact_date || $fact_montant_client),
                 'bubbleActive'     => 'bg-purple-600 border-purple-600 text-white ring-2 ring-purple-200',
                 'bubbleInProgress' => 'bg-purple-400 border-purple-400 text-white',
                 'borderTop'        => 'border-t-4 border-purple-500',
@@ -85,6 +86,20 @@
                                         : 'text-amber-700',
                 'connDone'         => 'bg-teal-300',
                 'checkAccent'      => 'accent-teal-600',
+            ],
+            5 => [
+                'label'            => 'Validation client',
+                'sublabel'         => 'Étape 4c',
+                'complete'         => $fact_validation_client && $fact_paiement_recu,
+                'hasData'          => (bool)($fact_validation_client || $fact_date_validation_facture || $fact_paiement_recu || $fact_date_paiement),
+                'bubbleActive'     => 'bg-indigo-600 border-indigo-600 text-white ring-2 ring-indigo-200',
+                'bubbleInProgress' => 'bg-indigo-400 border-indigo-400 text-white',
+                'borderTop'        => 'border-t-4 border-indigo-500',
+                'headerBg'         => 'bg-indigo-50 border-b border-indigo-200',
+                'headerText'       => 'text-indigo-800',
+                'labelActive'      => 'text-indigo-700',
+                'connDone'         => 'bg-indigo-300',
+                'checkAccent'      => 'accent-indigo-600',
             ],
         ];
 
@@ -239,6 +254,12 @@
                         <label class="form-label">Lieu Incoterm</label>
                         <input wire:model="incoterm_lieu" type="text" class="form-input" placeholder="FCA Transitaire France">
                     </div>
+                    <div class="form-group">
+                        <label class="form-label text-slate-400">Date livraison prévue</label>
+                        <input type="date" class="form-input bg-slate-50 text-slate-400 cursor-not-allowed"
+                               value="{{ $liv_date_prevue }}" disabled>
+                        <p class="text-xs text-slate-400 mt-0.5">Renseignée à l'étape 4 (Livraison)</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -258,14 +279,16 @@
                         @error('mad_date_prevue') <p class="form-error">{{ $message }}</p> @enderror
                     </div>
                     <div class="form-group">
+                        <label class="form-label">Date MAD fournisseur
+                            <span class="text-xs text-slate-400 font-normal">(confirmation fournisseur)</span>
+                        </label>
+                        <input wire:model="mad_date_fournisseur" type="date" class="form-input">
+                        @error('mad_date_fournisseur') <p class="form-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="form-group">
                         <label class="form-label">Date MAD réelle</label>
                         <input wire:model="mad_date_reelle" type="date" class="form-input">
                         @error('mad_date_reelle') <p class="form-error">{{ $message }}</p> @enderror
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Date validation document</label>
-                        <input wire:model="mad_date_validation_document" type="date" class="form-input">
-                        @error('mad_date_validation_document') <p class="form-error">{{ $message }}</p> @enderror
                     </div>
                 </div>
 
@@ -278,6 +301,33 @@
                         <input wire:model="mad_photos_recues" type="checkbox" class="rounded accent-blue-600">
                         <span class="text-sm font-medium text-slate-700">Photos reçues</span>
                     </label>
+                </div>
+
+                {{-- Validation des documents --}}
+                <div class="rounded-xl border border-blue-200 bg-blue-50/30 p-4 space-y-4">
+                    <p class="text-sm font-semibold text-blue-800">Validation des documents</p>
+                    <div class="grid grid-cols-3 gap-5">
+                        <div class="form-group">
+                            <label class="form-label">Date de demande</label>
+                            <input wire:model="mad_date_demande_validation" type="date" class="form-input">
+                            @error('mad_date_demande_validation') <p class="form-error">{{ $message }}</p> @enderror
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Date de réception</label>
+                            <input wire:model="mad_date_reception_validation" type="date" class="form-input">
+                            @error('mad_date_reception_validation') <p class="form-error">{{ $message }}</p> @enderror
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Délai attendu (jours)</label>
+                            <input wire:model="mad_delai_validation_jours" type="number" min="1" max="365" class="form-input">
+                            @error('mad_delai_validation_jours') <p class="form-error">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date validation document</label>
+                        <input wire:model="mad_date_validation_document" type="date" class="form-input">
+                        @error('mad_date_validation_document') <p class="form-error">{{ $message }}</p> @enderror
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -325,19 +375,58 @@
                     <input wire:model="fact_date_echeance" type="date" class="form-input">
                     @error('fact_date_echeance') <p class="form-error">{{ $message }}</p> @enderror
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Montant</label>
-                    <input wire:model="fact_montant" type="number" step="0.01" class="form-input">
-                    @error('fact_montant') <p class="form-error">{{ $message }}</p> @enderror
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Devise</label>
-                    <select wire:model="fact_devise" class="form-select">
-                        <option value="EUR">EUR €</option>
-                        <option value="USD">USD $</option>
-                        <option value="XAF">XAF FCFA</option>
-                        <option value="GBP">GBP £</option>
-                    </select>
+            </div>
+
+            {{-- Montants --}}
+            <div class="rounded-xl border border-purple-200 bg-purple-50/30 p-4 space-y-4">
+                <p class="text-sm font-semibold text-purple-800">Montants</p>
+                <div class="grid grid-cols-2 gap-5">
+                    <div class="form-group">
+                        <label class="form-label">Montant client</label>
+                        <input wire:model="fact_montant_client" type="number" step="0.01" class="form-input" placeholder="0.00">
+                        @error('fact_montant_client') <p class="form-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Devise client</label>
+                        <select wire:model="fact_devise_client" class="form-select">
+                            <option value="EUR">EUR €</option>
+                            <option value="USD">USD $</option>
+                            <option value="XAF">XAF FCFA</option>
+                            <option value="GBP">GBP £</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Montant fournisseur</label>
+                        <input wire:model="fact_montant_fournisseur" type="number" step="0.01" class="form-input" placeholder="0.00">
+                        @error('fact_montant_fournisseur') <p class="form-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Devise fournisseur</label>
+                        <select wire:model="fact_devise_fournisseur" class="form-select">
+                            <option value="EUR">EUR €</option>
+                            <option value="USD">USD $</option>
+                            <option value="XAF">XAF FCFA</option>
+                            <option value="GBP">GBP £</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taux de change <span class="text-xs text-slate-400 font-normal">(1 devise = x EUR)</span></label>
+                        <input wire:model="fact_taux_change" type="number" step="0.000001" class="form-input" placeholder="Ex: 0.001524">
+                        @error('fact_taux_change') <p class="form-error">{{ $message }}</p> @enderror
+                    </div>
+                    @if($fact_taux_change && ($fact_montant_client || $fact_montant_fournisseur))
+                    <div class="form-group">
+                        <label class="form-label text-slate-400">Montants en EUR (calculés)</label>
+                        <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1 text-sm text-slate-600">
+                            @if($fact_montant_client)
+                                <div>Client : <span class="font-semibold">{{ number_format($fact_montant_client / ($fact_devise_client === 'EUR' ? 1 : $fact_taux_change), 2, ',', ' ') }} €</span></div>
+                            @endif
+                            @if($fact_montant_fournisseur)
+                                <div>Fournisseur : <span class="font-semibold">{{ number_format($fact_montant_fournisseur / ($fact_devise_fournisseur === 'EUR' ? 1 : $fact_taux_change), 2, ',', ' ') }} €</span></div>
+                            @endif
+                        </div>
+                    </div>
+                    @endif
                 </div>
             </div>
 
@@ -376,39 +465,6 @@
                         <label class="form-label">Coût réel (€)</label>
                         <input wire:model="cout_reel" type="number" step="0.01" class="form-input" placeholder="0.00">
                         @error('cout_reel') <p class="form-error">{{ $message }}</p> @enderror
-                    </div>
-                </div>
-            </div>
-
-            <hr class="border-slate-100">
-
-            {{-- Section 4c : Validation facture par le client --}}
-            <div class="rounded-xl border border-purple-200 bg-purple-50/30 p-4 space-y-4">
-                <p class="text-sm font-semibold text-purple-800">Étape 4c — Validation facture par le client</p>
-
-                <div class="grid grid-cols-2 gap-5">
-                    <label class="flex items-center gap-3 p-4 rounded-xl border border-purple-200 bg-white cursor-pointer hover:bg-purple-50 col-span-2">
-                        <input wire:model="fact_validation_client" type="checkbox" class="rounded {{ $current['checkAccent'] }}">
-                        <span class="text-sm font-medium text-slate-700">Facture validée par le client</span>
-                    </label>
-                    <div class="form-group">
-                        <label class="form-label">Date validation facture</label>
-                        <input wire:model="fact_date_validation_facture" type="date" class="form-input">
-                        @error('fact_date_validation_facture') <p class="form-error">{{ $message }}</p> @enderror
-                    </div>
-                </div>
-
-                <hr class="border-purple-100">
-
-                <div class="grid grid-cols-2 gap-5">
-                    <label class="flex items-center gap-3 p-4 rounded-xl border border-purple-200 bg-white cursor-pointer hover:bg-purple-50 col-span-2">
-                        <input wire:model="fact_paiement_recu" type="checkbox" class="rounded {{ $current['checkAccent'] }}">
-                        <span class="text-sm font-medium text-slate-700">Paiement client reçu</span>
-                    </label>
-                    <div class="form-group">
-                        <label class="form-label">Date paiement</label>
-                        <input wire:model="fact_date_paiement" type="date" class="form-input">
-                        @error('fact_date_paiement') <p class="form-error">{{ $message }}</p> @enderror
                     </div>
                 </div>
             </div>
@@ -575,6 +631,45 @@
     </div>
     @endif
 
+    {{-- ══ Step 5 : Étape 4c — Validation facture client ════════ --}}
+    @if($currentStep === 5)
+    <div class="card {{ $current['borderTop'] }}">
+        <div class="card-header {{ $current['headerBg'] }}">
+            <h3 class="font-semibold {{ $current['headerText'] }}">Étape 4c — Validation facture & Paiement client</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Validation de la facture par le client et réception du paiement.</p>
+        </div>
+        <div class="card-body space-y-5">
+
+            <div class="grid grid-cols-2 gap-5">
+                <label class="flex items-center gap-3 p-4 rounded-xl border border-indigo-200 bg-indigo-50/50 cursor-pointer hover:bg-indigo-50 col-span-2">
+                    <input wire:model="fact_validation_client" type="checkbox" class="rounded {{ $current['checkAccent'] }}">
+                    <span class="text-sm font-medium text-slate-700">Facture validée par le client</span>
+                </label>
+                <div class="form-group">
+                    <label class="form-label">Date validation facture</label>
+                    <input wire:model="fact_date_validation_facture" type="date" class="form-input">
+                    @error('fact_date_validation_facture') <p class="form-error">{{ $message }}</p> @enderror
+                </div>
+            </div>
+
+            <hr class="border-indigo-100">
+
+            <div class="grid grid-cols-2 gap-5">
+                <label class="flex items-center gap-3 p-4 rounded-xl border border-indigo-200 bg-indigo-50/50 cursor-pointer hover:bg-indigo-50 col-span-2">
+                    <input wire:model="fact_paiement_recu" type="checkbox" class="rounded {{ $current['checkAccent'] }}">
+                    <span class="text-sm font-medium text-slate-700">Paiement client reçu</span>
+                </label>
+                <div class="form-group">
+                    <label class="form-label">Date paiement</label>
+                    <input wire:model="fact_date_paiement" type="date" class="form-input">
+                    @error('fact_date_paiement') <p class="form-error">{{ $message }}</p> @enderror
+                </div>
+            </div>
+
+        </div>
+    </div>
+    @endif
+
     {{-- ── Navigation ───────────────────────────────────────────── --}}
     <div class="flex items-center justify-between pt-2">
         <div>
@@ -584,7 +679,7 @@
         </div>
         <div class="flex items-center gap-3">
             <a href="{{ route('dossiers.index') }}" class="btn-ghost">Annuler</a>
-            @if($currentStep < 4)
+            @if($currentStep < 5)
                 <button wire:click="nextStep" type="button" class="btn-secondary">Suivant →</button>
             @endif
             <button wire:click="save" type="button" class="btn-primary">
