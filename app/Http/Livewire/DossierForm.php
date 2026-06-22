@@ -31,6 +31,7 @@ class DossierForm extends Component
     public string $pays_destination = '';
     public string $incoterm = 'FCA_USINE';
     public string $incoterm_lieu = '';
+    public string $date_promise_client = '';
     public string $categorie = '';
     public string $type_commande = '';
 
@@ -39,7 +40,10 @@ class DossierForm extends Component
     public string $mad_date_fournisseur = '';
     public string $mad_date_reelle = '';
     public bool   $mad_docs_recus = false;
+    public bool   $mad_docs_techniques_recus = false;
     public bool   $mad_photos_recues = false;
+    public bool   $mad_photos_emballage_recues = false;
+    public string $mad_nom_valideur = '';
     public string $mad_date_validation_document = '';
     public string $mad_date_demande_validation = '';
     public string $mad_date_reception_validation = '';
@@ -72,6 +76,7 @@ class DossierForm extends Component
     public string $transitaire_nom = '';
     public string $transitaire_contact = '';
     public string $poids = '';
+    public string $dimensions = '';
     public string $cout_transitaire = '';
     public string $cout_reel = '';
 
@@ -87,6 +92,7 @@ class DossierForm extends Component
     public string $liv_date_prevue = '';
     public string $liv_date_reelle = '';
     public string $liv_mode_transport = '';
+    public string $liv_type_doc_transport = '';
     public string $liv_awb = '';
     public string $liv_motif_retard = '';
     public bool   $liv_applicable = true;
@@ -110,7 +116,8 @@ class DossierForm extends Component
             'client_id'                   => 'required|exists:clients,id',
             'fournisseur_id'              => 'nullable|exists:fournisseurs,id',
             'incoterm'                    => 'required|in:FCA_USINE,FCA_TRANSITAIRE,CPT,CFR,EXW,AUTRES',
-            'type_commande'               => 'nullable|in:standard,projet',
+            'type_commande'               => 'nullable|in:standard,pj_c1,pj_c2,pj_c3,c1,c2,c3',
+            'date_promise_client'         => 'nullable|date',
             'transporteur_id'             => 'nullable|exists:transporteurs,id',
             'cout_reel'                   => 'nullable|numeric|min:0',
             'liv_motif_retard'            => 'nullable|string|max:500',
@@ -160,12 +167,14 @@ class DossierForm extends Component
         $this->pays_destination  = $d->pays_destination ?? '';
         $this->incoterm          = $d->incoterm;
         $this->incoterm_lieu     = $d->incoterm_lieu ?? '';
+        $this->date_promise_client = $d->date_promise_client?->format('Y-m-d') ?? '';
         $this->categorie         = $d->categorie ?? '';
         $this->type_commande     = $d->type_commande ?? '';
         $this->transporteur_id   = $d->transporteur_id;
         $this->transitaire_nom   = $d->transitaire_nom ?? '';
         $this->transitaire_contact = $d->transitaire_contact ?? '';
         $this->poids             = $d->poids ?? '';
+        $this->dimensions        = $d->dimensions ?? '';
         $this->cout_transitaire  = $d->cout_transitaire ?? '';
         $this->cout_reel         = $d->cout_reel ?? '';
 
@@ -174,7 +183,10 @@ class DossierForm extends Component
             $this->mad_date_fournisseur          = $m->date_mad_fournisseur?->format('Y-m-d') ?? '';
             $this->mad_date_reelle               = $m->date_mad_reelle?->format('Y-m-d') ?? '';
             $this->mad_docs_recus                = $m->docs_recus;
+            $this->mad_docs_techniques_recus     = $m->docs_techniques_recus;
             $this->mad_photos_recues             = $m->photos_recues;
+            $this->mad_photos_emballage_recues   = $m->photos_emballage_recues;
+            $this->mad_nom_valideur              = $m->nom_valideur ?? '';
             $this->mad_date_validation_document  = $m->date_validation_document?->format('Y-m-d') ?? '';
             $this->mad_date_demande_validation   = $m->date_demande_validation?->format('Y-m-d') ?? '';
             $this->mad_date_reception_validation = $m->date_reception_validation?->format('Y-m-d') ?? '';
@@ -214,8 +226,9 @@ class DossierForm extends Component
         if ($l = $d->etapeLivraison) {
             $this->liv_date_prevue    = $l->date_livraison_prevue?->format('Y-m-d') ?? '';
             $this->liv_date_reelle    = $l->date_livraison_reelle?->format('Y-m-d') ?? '';
-            $this->liv_mode_transport = $l->mode_transport ?? '';
-            $this->liv_awb            = $l->awb_bl_numero ?? '';
+            $this->liv_mode_transport     = $l->mode_transport ?? '';
+            $this->liv_type_doc_transport = $l->type_doc_transport ?? '';
+            $this->liv_awb                = $l->awb_bl_numero ?? '';
             $this->liv_motif_retard   = $l->motif_retard ?? '';
             $this->liv_applicable     = $l->applicable;
             $this->liv_observations   = $l->observations ?? '';
@@ -244,14 +257,16 @@ class DossierForm extends Component
                 'fournisseur_id'   => $this->fournisseur_id ?: null,
                 'reference_affaire'=> $this->reference_affaire ?: null,
                 'pays_destination' => $this->pays_destination ?: null,
-                'incoterm'         => $this->incoterm,
-                'incoterm_lieu'    => $this->incoterm_lieu ?: null,
-                'categorie'        => $this->categorie ?: null,
+                'incoterm'             => $this->incoterm,
+                'incoterm_lieu'        => $this->incoterm_lieu ?: null,
+                'date_promise_client'  => $this->date_promise_client ?: null,
+                'categorie'            => $this->categorie ?: null,
                 'type_commande'    => $this->type_commande ?: null,
                 'transporteur_id'  => $this->transporteur_id ?: null,
                 'transitaire_nom'  => $this->transitaire_nom ?: null,
                 'transitaire_contact' => $this->transitaire_contact ?: null,
                 'poids'            => $this->poids ?: null,
+                'dimensions'       => $this->dimensions ?: null,
                 'cout_transitaire' => $this->cout_transitaire ?: null,
                 'cout_reel'        => $this->cout_reel ?: null,
             ];
@@ -280,7 +295,10 @@ class DossierForm extends Component
                 'date_mad_fournisseur'      => $this->mad_date_fournisseur ?: null,
                 'date_mad_reelle'           => $this->mad_date_reelle ?: null,
                 'docs_recus'                => $this->mad_docs_recus,
+                'docs_techniques_recus'     => $this->mad_docs_techniques_recus,
                 'photos_recues'             => $this->mad_photos_recues,
+                'photos_emballage_recues'   => $this->mad_photos_emballage_recues,
+                'nom_valideur'              => $this->mad_nom_valideur ?: null,
                 'date_validation_document'  => $this->mad_date_validation_document ?: null,
                 'date_demande_validation'   => $this->mad_date_demande_validation ?: null,
                 'date_reception_validation' => $this->mad_date_reception_validation ?: null,
@@ -343,6 +361,7 @@ class DossierForm extends Component
                 'date_livraison_prevue'  => $this->liv_date_prevue ?: null,
                 'date_livraison_reelle'  => $this->liv_date_reelle ?: null,
                 'mode_transport'         => $this->liv_mode_transport ?: null,
+                'type_doc_transport'     => $this->liv_type_doc_transport ?: null,
                 'awb_bl_numero'          => $this->liv_awb ?: null,
                 'motif_retard'           => $this->liv_motif_retard ?: null,
                 'applicable'             => $this->liv_applicable,

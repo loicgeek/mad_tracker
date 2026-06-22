@@ -171,10 +171,10 @@
                     <td class="font-medium">{{ $d->client->nom ?? '-' }}</td>
                     <td class="text-slate-600">{{ $d->fournisseur->nom ?? '-' }}</td>
                     <td>
-                        @if($d->type_commande === 'projet')
-                            <span class="badge badge-purple">Projet</span>
-                        @elseif($d->type_commande === 'standard')
-                            <span class="badge badge-gray">Standard</span>
+                        @if($d->type_commande)
+                            <span class="badge {{ in_array($d->type_commande, ['pj_c1','pj_c2','pj_c3']) ? 'badge-purple' : 'badge-gray' }} uppercase">
+                                {{ str_replace('_', '/', $d->type_commande) }}
+                            </span>
                         @else
                             <span class="text-slate-300 text-xs">—</span>
                         @endif

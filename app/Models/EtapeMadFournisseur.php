@@ -8,9 +8,9 @@ class EtapeMadFournisseur extends Model
     protected $table = 'etape_mad_fournisseurs';
     protected $fillable = [
         'dossier_id', 'date_mad_prevue', 'date_mad_fournisseur', 'date_mad_reelle',
-        'docs_recus', 'photos_recues', 'date_validation_document',
-        'date_demande_validation', 'date_reception_validation', 'delai_validation_jours',
-        'observations', 'complete',
+        'docs_recus', 'docs_techniques_recus', 'photos_recues', 'photos_emballage_recues',
+        'date_validation_document', 'date_demande_validation', 'date_reception_validation',
+        'delai_validation_jours', 'nom_valideur', 'observations', 'complete',
     ];
     protected $casts = [
         'date_mad_prevue'           => 'date',
@@ -21,7 +21,9 @@ class EtapeMadFournisseur extends Model
         'date_reception_validation' => 'date',
         'delai_validation_jours'    => 'integer',
         'docs_recus'                => 'boolean',
+        'docs_techniques_recus'     => 'boolean',
         'photos_recues'             => 'boolean',
+        'photos_emballage_recues'   => 'boolean',
         'complete'                  => 'boolean',
     ];
     public function dossier(): BelongsTo { return $this->belongsTo(Dossier::class); }

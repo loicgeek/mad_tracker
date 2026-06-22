@@ -82,7 +82,7 @@ class ExportController extends Controller
 
         $parType = DB::table('dossiers')
             ->where('dossiers.created_at', '>=', $since)->whereNull('dossiers.deleted_at')
-            ->whereIn('type_commande', ['standard', 'projet'])
+            ->whereNotNull('type_commande')
             ->leftJoin('etape_livraisons', 'etape_livraisons.dossier_id', '=', 'dossiers.id')
             ->groupBy('dossiers.type_commande')
             ->select('dossiers.type_commande',
@@ -159,7 +159,7 @@ class ExportController extends Controller
             fputcsv($out, ["=== Standard vs Projet ==="], ';');
             fputcsv($out, ['Type', 'Total', 'Finalisés', 'Taux (%)', 'Délai moyen (j)'], ';');
             foreach ($parType as $r) {
-                fputcsv($out, [ucfirst($r->type_commande), $r->total, $r->finalises, $r->taux, $r->delai_moyen ?? ''], ';');
+                fputcsv($out, [strtoupper(str_replace('_', '/', $r->type_commande)), $r->total, $r->finalises, $r->taux, $r->delai_moyen ?? ''], ';');
             }
 
             // Section 7 — Délai par incoterm

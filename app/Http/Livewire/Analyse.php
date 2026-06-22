@@ -154,7 +154,7 @@ class Analyse extends Component
         $this->parType = DB::table('dossiers')
             ->where('dossiers.created_at', '>=', $since)
             ->whereNull('dossiers.deleted_at')
-            ->whereIn('type_commande', ['standard', 'projet'])
+            ->whereNotNull('type_commande')
             ->leftJoin('etape_livraisons', 'etape_livraisons.dossier_id', '=', 'dossiers.id')
             ->groupBy('dossiers.type_commande')
             ->select(

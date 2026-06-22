@@ -68,8 +68,8 @@
         @if($dossier->type_commande)
         <div class="card p-4">
             <p class="text-xs text-slate-500 mb-1">Type commande</p>
-            <span class="badge {{ $dossier->type_commande === 'projet' ? 'badge-purple' : 'badge-gray' }} capitalize">
-                {{ $dossier->type_commande }}
+            <span class="badge {{ in_array($dossier->type_commande, ['pj_c1','pj_c2','pj_c3']) ? 'badge-purple' : 'badge-gray' }} uppercase">
+                {{ str_replace('_', '/', $dossier->type_commande) }}
             </span>
         </div>
         @endif
@@ -251,9 +251,11 @@
                                     @endif
                                 </p>
                             @endif
-                            <div class="flex gap-2 mt-1">
-                                <span @class(['badge badge-sm', 'badge-emerald' => $mad->docs_recus,   'badge-gray' => !$mad->docs_recus])>Docs</span>
-                                <span @class(['badge badge-sm', 'badge-emerald' => $mad->photos_recues,'badge-gray' => !$mad->photos_recues])>Photos</span>
+                            <div class="flex flex-wrap gap-2 mt-1">
+                                <span @class(['badge badge-sm', 'badge-emerald' => $mad->docs_recus,              'badge-gray' => !$mad->docs_recus])>Docs logistiques</span>
+                                <span @class(['badge badge-sm', 'badge-emerald' => $mad->docs_techniques_recus,   'badge-gray' => !$mad->docs_techniques_recus])>Docs techniques</span>
+                                <span @class(['badge badge-sm', 'badge-emerald' => $mad->photos_recues,           'badge-gray' => !$mad->photos_recues])>Photos matériel</span>
+                                <span @class(['badge badge-sm', 'badge-emerald' => $mad->photos_emballage_recues, 'badge-gray' => !$mad->photos_emballage_recues])>Photos emballage</span>
                             </div>
                             @if($mad->observations)
                                 <p class="text-slate-600 italic">{{ $mad->observations }}</p>
@@ -390,7 +392,11 @@
                                     @endif
                                 </p>
                             @endif
-                            @if($liv->awb_bl_numero) <p>AWB/BL : <strong>{{ $liv->awb_bl_numero }}</strong></p> @endif
+                            @if($liv->type_doc_transport || $liv->awb_bl_numero)
+                                <p>Doc transport :
+                                    <strong>{{ $liv->type_doc_transport ? $liv->type_doc_transport.' ' : '' }}{{ $liv->awb_bl_numero }}</strong>
+                                </p>
+                            @endif
                             @if($liv->observations) <p class="text-slate-600 italic">{{ $liv->observations }}</p> @endif
                         </div>
                         @else

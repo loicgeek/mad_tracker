@@ -440,8 +440,8 @@
                         @foreach($parType as $r)
                         <tr>
                             <td>
-                                <span class="badge {{ $r->type_commande === 'projet' ? 'badge-purple' : 'badge-gray' }} capitalize">
-                                    {{ $r->type_commande }}
+                                <span class="badge {{ in_array($r->type_commande, ['pj_c1','pj_c2','pj_c3']) ? 'badge-purple' : 'badge-gray' }} uppercase">
+                                    {{ str_replace('_', '/', $r->type_commande) }}
                                 </span>
                             </td>
                             <td class="text-right">{{ $r->total }}</td>
@@ -578,8 +578,8 @@
                     <tr>
                         <td class="font-mono text-xs font-medium text-slate-700">{{ $r->reference }}</td>
                         <td>
-                            <span class="badge {{ $r->type_commande === 'projet' ? 'badge-purple' : 'badge-gray' }} capitalize text-xs">
-                                {{ $r->type_commande ?? '—' }}
+                            <span class="badge {{ in_array($r->type_commande, ['pj_c1','pj_c2','pj_c3']) ? 'badge-purple' : 'badge-gray' }} uppercase text-xs">
+                                {{ $r->type_commande ? str_replace('_', '/', $r->type_commande) : '—' }}
                             </span>
                         </td>
                         <td class="text-right text-xs text-slate-600">{{ $r->mad_reelle ? \Carbon\Carbon::parse($r->mad_reelle)->format('d/m/Y') : '—' }}</td>

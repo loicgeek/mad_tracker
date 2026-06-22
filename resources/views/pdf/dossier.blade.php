@@ -81,7 +81,7 @@
     <h3>Étape 4 — Livraison {{ $liv->complete ? '✓' : '…' }}</h3>
     <p>Prévue : {{ $liv->date_livraison_prevue?->format('d/m/Y') ?: '—' }} | Réelle : {{ $liv->date_livraison_reelle?->format('d/m/Y') ?: '—' }}</p>
     @if(!is_null($liv->ecart_jours))<p>Écart : {{ $liv->ecart_jours }}j</p>@endif
-    @if($liv->awb_bl_numero)<p>AWB/BL : {{ $liv->awb_bl_numero }}</p>@endif
+    @if($liv->type_doc_transport || $liv->awb_bl_numero)<p>Doc transport : {{ $liv->type_doc_transport ? $liv->type_doc_transport.' ' : '' }}{{ $liv->awb_bl_numero }}</p>@endif
 </div>
 @endif
 

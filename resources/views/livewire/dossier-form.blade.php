@@ -195,7 +195,12 @@
                         <select wire:model="type_commande" class="form-select">
                             <option value="">— Sélectionner —</option>
                             <option value="standard">Standard</option>
-                            <option value="projet">Projet</option>
+                            <option value="pj_c1">PJ/C1</option>
+                            <option value="pj_c2">PJ/C2</option>
+                            <option value="pj_c3">PJ/C3</option>
+                            <option value="c1">C1</option>
+                            <option value="c2">C2</option>
+                            <option value="c3">C3</option>
                         </select>
                     </div>
                 </div>
@@ -255,10 +260,9 @@
                         <input wire:model="incoterm_lieu" type="text" class="form-input" placeholder="FCA Transitaire France">
                     </div>
                     <div class="form-group">
-                        <label class="form-label text-slate-400">Date livraison prévue</label>
-                        <input type="date" class="form-input bg-slate-50 text-slate-400 cursor-not-allowed"
-                               value="{{ $liv_date_prevue }}" disabled>
-                        <p class="text-xs text-slate-400 mt-0.5">Renseignée à l'étape 4 (Livraison)</p>
+                        <label class="form-label">Date de MAD promise au client sur AR</label>
+                        <input wire:model="date_promise_client" type="date" class="form-input">
+                        @error('date_promise_client') <p class="form-error">{{ $message }}</p> @enderror
                     </div>
                 </div>
             </div>
@@ -295,11 +299,19 @@
                 <div class="grid grid-cols-2 gap-4">
                     <label class="flex items-center gap-3 p-4 rounded-xl border border-blue-200 bg-blue-50/50 cursor-pointer hover:bg-blue-50">
                         <input wire:model="mad_docs_recus" type="checkbox" class="rounded accent-blue-600">
-                        <span class="text-sm font-medium text-slate-700">Documents reçus</span>
+                        <span class="text-sm font-medium text-slate-700">Documents logistiques reçus</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-4 rounded-xl border border-blue-200 bg-blue-50/50 cursor-pointer hover:bg-blue-50">
+                        <input wire:model="mad_docs_techniques_recus" type="checkbox" class="rounded accent-blue-600">
+                        <span class="text-sm font-medium text-slate-700">Documents techniques reçus</span>
                     </label>
                     <label class="flex items-center gap-3 p-4 rounded-xl border border-blue-200 bg-blue-50/50 cursor-pointer hover:bg-blue-50">
                         <input wire:model="mad_photos_recues" type="checkbox" class="rounded accent-blue-600">
-                        <span class="text-sm font-medium text-slate-700">Photos reçues</span>
+                        <span class="text-sm font-medium text-slate-700">Photos du matériel</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-4 rounded-xl border border-blue-200 bg-blue-50/50 cursor-pointer hover:bg-blue-50">
+                        <input wire:model="mad_photos_emballage_recues" type="checkbox" class="rounded accent-blue-600">
+                        <span class="text-sm font-medium text-slate-700">Photos après emballage</span>
                     </label>
                 </div>
 
@@ -323,10 +335,16 @@
                             @error('mad_delai_validation_jours') <p class="form-error">{{ $message }}</p> @enderror
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Date validation document</label>
-                        <input wire:model="mad_date_validation_document" type="date" class="form-input">
-                        @error('mad_date_validation_document') <p class="form-error">{{ $message }}</p> @enderror
+                    <div class="grid grid-cols-2 gap-5">
+                        <div class="form-group">
+                            <label class="form-label">Date validation document</label>
+                            <input wire:model="mad_date_validation_document" type="date" class="form-input">
+                            @error('mad_date_validation_document') <p class="form-error">{{ $message }}</p> @enderror
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Nom du valideur</label>
+                            <input wire:model="mad_nom_valideur" type="text" class="form-input" placeholder="Prénom Nom">
+                        </div>
                     </div>
                 </div>
 
@@ -456,7 +474,10 @@
                         <label class="form-label">Poids (kg)</label>
                         <input wire:model="poids" type="number" step="0.1" class="form-input">
                     </div>
-                    <div class="form-group"></div>
+                    <div class="form-group">
+                        <label class="form-label">Dimensions</label>
+                        <input wire:model="dimensions" type="text" class="form-input" placeholder="Ex: 120×80×100 cm">
+                    </div>
                     <div class="form-group">
                         <label class="form-label">Coût prévu (€)</label>
                         <input wire:model="cout_transitaire" type="number" step="0.01" class="form-input" placeholder="0.00">
@@ -563,8 +584,20 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">N° AWB / BL</label>
-                        <input wire:model="liv_awb" type="text" class="form-input">
+                        <label class="form-label">Type de document de transport</label>
+                        <select wire:model="liv_type_doc_transport" class="form-select">
+                            <option value="">— Sélectionner —</option>
+                            <option value="AWB">AWB (Air Waybill)</option>
+                            <option value="BL">BL (Connaissement maritime)</option>
+                            <option value="LTA">LTA (Lettre de transport aérien)</option>
+                            <option value="CMR">CMR (Transport routier)</option>
+                            <option value="CIM">CIM (Transport ferroviaire)</option>
+                            <option value="autre">Autre</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Référence document de transport</label>
+                        <input wire:model="liv_awb" type="text" class="form-input" placeholder="N° de référence">
                     </div>
                 </div>
 

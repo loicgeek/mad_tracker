@@ -18,10 +18,10 @@ class Dossier extends Model
     protected $fillable = [
         'reference', 'user_id', 'client_id', 'fournisseur_id',
         'numero_facture', 'reference_affaire', 'pays_destination',
-        'incoterm', 'incoterm_lieu', 'categorie',
+        'incoterm', 'incoterm_lieu', 'date_promise_client', 'categorie',
         'type_commande', 'transporteur_id',
         'transitaire_nom', 'transitaire_contact',
-        'poids', 'cout_transitaire', 'cout_reel',
+        'poids', 'dimensions', 'cout_transitaire', 'cout_reel',
         'statut',
         'alerte_retard_mad', 'alerte_facture_manquante',
         'alerte_transitaire_manquant', 'alerte_pod_manquante',
