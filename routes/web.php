@@ -13,6 +13,9 @@ use App\Http\Controllers\ExportController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Livewire\TransporteurIndex;
+use App\Http\Livewire\UsersIndex;
+use App\Http\Livewire\PaiementsIndex;
+use App\Http\Livewire\AboutPage;
 
 // Auth
 Route::middleware('guest')->group(function () {
@@ -23,7 +26,7 @@ Route::middleware('guest')->group(function () {
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
 // App (auth required)
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'account.active'])->group(function () {
     Route::get('/', Dashboard::class)->name('dashboard');
 
     Route::get('/dossiers', DossierIndex::class)->name('dossiers.index');
@@ -57,8 +60,17 @@ Route::middleware('auth')->group(function () {
     // Paramètres
     Route::get('/parametres', \App\Http\Livewire\Settings::class)->name('settings');
 
+    // Utilisateurs & Paiements
+    Route::get('/utilisateurs', UsersIndex::class)
+        ->middleware('role:super_admin,administratif')->name('utilisateurs.index');
+    Route::get('/paiements', PaiementsIndex::class)
+        ->middleware('role:super_admin')->name('paiements.index');
+
     // Exports
     Route::get('/export/dossiers', [ExportController::class, 'dossiers'])->name('export.dossiers');
     Route::get('/export/analyses', [ExportController::class, 'analyses'])->name('export.analyses');
     Route::get('/export/dossier/{id}/pdf', [ExportController::class, 'dossierPdf'])->name('export.dossier.pdf');
+
+    // Légal
+    Route::get('/a-propos', AboutPage::class)->name('about');
 });

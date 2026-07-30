@@ -13,6 +13,9 @@ class Settings extends Component
     // Groupe : MAD
     public string $validation_delai_jours = '5';
 
+    // Groupe : comptes
+    public string $echeance_rappel_jours = '7';
+
     // Groupe : général
     public string $app_nom = 'MAD Tracker';
 
@@ -21,6 +24,7 @@ class Settings extends Component
         return [
             'dg_email'               => 'nullable|email|max:255',
             'validation_delai_jours' => 'required|integer|min:1|max:365',
+            'echeance_rappel_jours'  => 'required|integer|min:1|max:90',
             'app_nom'                => 'required|string|max:100',
         ];
     }
@@ -30,6 +34,7 @@ class Settings extends Component
         'validation_delai_jours.required'   => 'Le délai est obligatoire.',
         'validation_delai_jours.integer'    => 'Le délai doit être un nombre entier.',
         'validation_delai_jours.min'        => 'Le délai doit être d\'au moins 1 jour.',
+        'echeance_rappel_jours.required'    => 'Le délai de rappel est obligatoire.',
         'app_nom.required'                  => 'Le nom de l\'application est obligatoire.',
     ];
 
@@ -37,6 +42,7 @@ class Settings extends Component
     {
         $this->dg_email               = Setting::get('dg_email') ?? '';
         $this->validation_delai_jours = Setting::get('validation_delai_jours', '5');
+        $this->echeance_rappel_jours  = Setting::get('echeance_rappel_jours', '7');
         $this->app_nom                = Setting::get('app_nom', 'MAD Tracker');
     }
 
@@ -46,6 +52,7 @@ class Settings extends Component
 
         Setting::set('dg_email',               $this->dg_email ?: null);
         Setting::set('validation_delai_jours', $this->validation_delai_jours);
+        Setting::set('echeance_rappel_jours',  $this->echeance_rappel_jours);
         Setting::set('app_nom',                $this->app_nom);
 
         $this->dispatch('notify', type: 'success', message: 'Paramètres enregistrés.');

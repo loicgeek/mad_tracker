@@ -307,4 +307,16 @@ class Dossier extends Model
 
     // ── Static Helpers ─────────────────────────────────────────────
 
+    public static function genererReference(): string
+    {
+        $year = now()->year;
+        $prefix = "DOS-{$year}-";
+
+        do {
+            $sequence = static::withTrashed()->where('reference', 'like', "{$prefix}%")->count() + 1;
+            $reference = $prefix . str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+        } while (static::withTrashed()->where('reference', $reference)->exists());
+
+        return $reference;
+    }
 }

@@ -20,6 +20,11 @@ class AuthController extends Controller
         ]);
 
         if (Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
+            if (! Auth::user()->actif) {
+                Auth::logout();
+                return back()->withErrors(['email' => 'Compte désactivé — contactez votre administrateur.'])->onlyInput('email');
+            }
+
             $request->session()->regenerate();
             return redirect()->intended(route('dashboard'));
         }

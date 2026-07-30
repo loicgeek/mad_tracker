@@ -42,6 +42,22 @@
         </div>
     </div>
 
+    {{-- Groupe : Comptes --}}
+    <div class="card border-t-4 border-amber-500">
+        <div class="card-header bg-amber-50 border-b border-amber-200">
+            <h3 class="font-semibold text-amber-800">Comptes &amp; échéances</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Rappel avant expiration d'un abonnement de compte.</p>
+        </div>
+        <div class="card-body space-y-5">
+            <div class="form-group" style="max-width:200px">
+                <label class="form-label">Rappel avant échéance (jours)</label>
+                <input wire:model="echeance_rappel_jours" type="number" min="1" max="90" class="form-input">
+                @error('echeance_rappel_jours') <p class="form-error">{{ $message }}</p> @enderror
+                <p class="text-xs text-slate-400 mt-1">Un rappel est envoyé au super administrateur ce nombre de jours avant l'échéance d'un compte.</p>
+            </div>
+        </div>
+    </div>
+
     {{-- Groupe : Général --}}
     <div class="card border-t-4 border-slate-500">
         <div class="card-header bg-slate-50 border-b border-slate-200">
