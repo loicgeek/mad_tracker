@@ -241,7 +241,12 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Pays de destination</label>
-                        <input wire:model="pays_destination" type="text" class="form-input" placeholder="Cameroun">
+                        <select wire:model="pays_destination" class="form-select">
+                            <option value="">—</option>
+                            @foreach(\App\Support\Pays::optionsAvec($pays_destination) as $p)
+                                <option value="{{ $p }}">{{ $p }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Incoterm <span class="text-red-500">*</span></label>

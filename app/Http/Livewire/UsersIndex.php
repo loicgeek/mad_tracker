@@ -19,6 +19,7 @@ class UsersIndex extends Component
     public bool $showModal = false;
     public bool $isEdit = false;
     public ?int $editingId = null;
+    public string $editingOriginalRole = '';
 
     // Form fields
     public string $nom = '';
@@ -27,6 +28,7 @@ class UsersIndex extends Component
     public string $email = '';
     public string $password = '';
     public string $role = 'gestionnaire';
+    public string $entitlementError = '';
 
     protected function rules(): array
     {
@@ -75,25 +77,44 @@ class UsersIndex extends Component
     }
 
     /**
-     * Vérifie l'entitlement avant création. Retourne un message d'erreur si dépassé, sinon null.
+     * Vérifie l'entitlement pour l'état actuel du formulaire (création ou modification).
+     * - Le plafond total ne s'applique qu'à une création (un edit ne change pas le nombre de comptes).
+     * - Le plafond "comptes admin" s'applique dès que le compte DEVIENT admin : à la création
+     *   avec ce rôle, ou en modification si le rôle d'origine n'était pas déjà admin.
+     * Retourne un message d'erreur si dépassé, sinon null.
      */
-    private function verifierEntitlement(string $roleVoulu): ?string
+    private function verifierEntitlement(): ?string
     {
-        if ($this->comptesTotalActuels() >= $this->limiteComptesTotal()) {
+        if (! $this->isEdit && $this->comptesTotalActuels() >= $this->limiteComptesTotal()) {
             return "Limite de {$this->limiteComptesTotal()} comptes atteinte pour cet abonnement.";
         }
-        if ($roleVoulu === 'admin' && $this->comptesAdminActuels() >= $this->limiteComptesAdmin()) {
+
+        $devientAdmin = $this->role === 'admin' && $this->editingOriginalRole !== 'admin';
+        if ($devientAdmin && $this->comptesAdminActuels() >= $this->limiteComptesAdmin()) {
             return "Limite de {$this->limiteComptesAdmin()} comptes administrateur atteinte pour cet abonnement.";
         }
+
         return null;
     }
 
     public function updatingSearch(): void { $this->resetPage(); }
 
+    /**
+     * Retour immédiat dans le formulaire dès que le rôle choisi dépasse l'entitlement,
+     * sans attendre la soumission.
+     */
+    public function updatedRole(): void
+    {
+        $this->entitlementError = $this->verifierEntitlement() ?? '';
+    }
+
     public function openCreate(): void
     {
-        if ($erreur = $this->verifierEntitlement($this->role)) {
-            $this->dispatch('notify', type: 'error', message: $erreur);
+        // Le plafond total peut déjà être connu avant même de choisir un rôle ;
+        // le plafond spécifique aux comptes admin ne peut être vérifié qu'une fois
+        // le rôle choisi dans le formulaire (cf. updatedRole()).
+        if ($this->comptesTotalActuels() >= $this->limiteComptesTotal()) {
+            $this->dispatch('notify', type: 'error', message: "Limite de {$this->limiteComptesTotal()} comptes atteinte pour cet abonnement.");
             return;
         }
 
@@ -112,12 +133,21 @@ class UsersIndex extends Component
         $this->email     = $user->email;
         $this->password  = '';
         $this->role      = $user->role;
+        $this->editingOriginalRole = $user->role;
         $this->isEdit    = true;
+        $this->entitlementError = '';
         $this->showModal = true;
     }
 
     public function save(): void
     {
+        $erreur = $this->verifierEntitlement();
+        if ($erreur) {
+            $this->entitlementError = $erreur;
+            return;
+        }
+        $this->entitlementError = '';
+
         $this->validate();
 
         $data = [
@@ -136,11 +166,6 @@ class UsersIndex extends Component
             $this->baseQuery()->findOrFail($this->editingId)->update($data);
             $this->dispatch('notify', type: 'success', message: 'Compte mis à jour.');
         } else {
-            if ($erreur = $this->verifierEntitlement($this->role)) {
-                $this->dispatch('notify', type: 'error', message: $erreur);
-                return;
-            }
-
             $data['created_by'] = auth()->id();
             $data['actif']      = true;
             User::create($data);
@@ -161,6 +186,8 @@ class UsersIndex extends Component
         $this->nom = $this->prenom = $this->initiales = $this->email = $this->password = '';
         $this->role = 'gestionnaire';
         $this->editingId = null;
+        $this->editingOriginalRole = '';
+        $this->entitlementError = '';
         $this->resetValidation();
     }
 

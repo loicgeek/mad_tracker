@@ -125,7 +125,12 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Pays</label>
-                        <input wire:model="pays" type="text" class="form-input" placeholder="Cameroun">
+                        <select wire:model="pays" class="form-select">
+                            <option value="">—</option>
+                            @foreach(\App\Support\Pays::optionsAvec($pays) as $p)
+                                <option value="{{ $p }}">{{ $p }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Contact</label>

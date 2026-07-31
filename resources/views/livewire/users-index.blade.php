@@ -98,6 +98,11 @@
                 </button>
             </div>
             <div class="modal-body space-y-4">
+                @if($entitlementError)
+                <div class="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">
+                    {{ $entitlementError }}
+                </div>
+                @endif
                 <div class="grid grid-cols-2 gap-4">
                     <div class="form-group">
                         <label class="form-label">Prénom <span class="text-red-500">*</span></label>
@@ -116,7 +121,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Rôle <span class="text-red-500">*</span></label>
-                        <select wire:model="role" class="form-select">
+                        <select wire:model.live="role" class="form-select">
                             @foreach(\App\Models\User::ROLES as $value => $label)
                                 @if(auth()->user()->isSuperAdmin() || in_array($value, ['admin','gestionnaire','lecteur']))
                                     <option value="{{ $value }}">{{ $label }}</option>
@@ -139,7 +144,7 @@
             </div>
             <div class="modal-footer">
                 <button wire:click="closeModal" class="btn-secondary">Annuler</button>
-                <button wire:click="save" class="btn-primary">
+                <button wire:click="save" class="btn-primary" @if($entitlementError) disabled @endif>
                     {{ $isEdit ? 'Enregistrer' : 'Créer' }}
                 </button>
             </div>
