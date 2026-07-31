@@ -5,6 +5,7 @@ namespace App\Http\Livewire;
 use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\User;
+use App\Models\Setting;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
@@ -26,8 +27,6 @@ class UsersIndex extends Component
     public string $email = '';
     public string $password = '';
     public string $role = 'gestionnaire';
-
-    public const LIMITE_COMPTES_ADMINISTRATIF = 4;
 
     protected function rules(): array
     {
@@ -51,16 +50,51 @@ class UsersIndex extends Component
             : ['admin', 'gestionnaire', 'lecteur'];
     }
 
+    /**
+     * Limites d'entitlement fixées par le super_admin (éditeur de la plateforme) —
+     * cf. /parametres, carte "Limites & abonnement".
+     */
+    private function limiteComptesAdmin(): int
+    {
+        return (int) Setting::get('limite_comptes_admin', 2);
+    }
+
+    private function limiteComptesTotal(): int
+    {
+        return (int) Setting::get('limite_comptes_total', 10);
+    }
+
+    private function comptesAdminActuels(): int
+    {
+        return User::where('role', 'admin')->count();
+    }
+
+    private function comptesTotalActuels(): int
+    {
+        return User::where('role', '!=', 'super_admin')->count();
+    }
+
+    /**
+     * Vérifie l'entitlement avant création. Retourne un message d'erreur si dépassé, sinon null.
+     */
+    private function verifierEntitlement(string $roleVoulu): ?string
+    {
+        if ($this->comptesTotalActuels() >= $this->limiteComptesTotal()) {
+            return "Limite de {$this->limiteComptesTotal()} comptes atteinte pour cet abonnement.";
+        }
+        if ($roleVoulu === 'admin' && $this->comptesAdminActuels() >= $this->limiteComptesAdmin()) {
+            return "Limite de {$this->limiteComptesAdmin()} comptes administrateur atteinte pour cet abonnement.";
+        }
+        return null;
+    }
+
     public function updatingSearch(): void { $this->resetPage(); }
 
     public function openCreate(): void
     {
-        if (! auth()->user()->isSuperAdmin()) {
-            $count = auth()->user()->comptesCrees()->count();
-            if ($count >= self::LIMITE_COMPTES_ADMINISTRATIF) {
-                $this->dispatch('notify', type: 'error', message: 'Limite de 4 comptes créés atteinte.');
-                return;
-            }
+        if ($erreur = $this->verifierEntitlement($this->role)) {
+            $this->dispatch('notify', type: 'error', message: $erreur);
+            return;
         }
 
         $this->resetForm();
@@ -102,9 +136,8 @@ class UsersIndex extends Component
             $this->baseQuery()->findOrFail($this->editingId)->update($data);
             $this->dispatch('notify', type: 'success', message: 'Compte mis à jour.');
         } else {
-            if (! auth()->user()->isSuperAdmin()
-                && auth()->user()->comptesCrees()->count() >= self::LIMITE_COMPTES_ADMINISTRATIF) {
-                $this->dispatch('notify', type: 'error', message: 'Limite de 4 comptes créés atteinte.');
+            if ($erreur = $this->verifierEntitlement($this->role)) {
+                $this->dispatch('notify', type: 'error', message: $erreur);
                 return;
             }
 
@@ -132,15 +165,16 @@ class UsersIndex extends Component
     }
 
     /**
-     * super_admin voit tous les comptes ; administratif ne voit que lui-même
-     * et les comptes qu'il a créés.
+     * super_admin (éditeur de la plateforme) voit tous les comptes, y compris les autres
+     * super_admin. L'administratif gère l'ensemble des comptes de son équipe (tout sauf
+     * super_admin), sous les limites d'entitlement fixées par le super_admin.
      */
     private function baseQuery()
     {
         $query = User::query();
 
         if (! auth()->user()->isSuperAdmin()) {
-            $query->where(fn ($q) => $q->where('id', auth()->id())->orWhere('created_by', auth()->id()));
+            $query->where('role', '!=', 'super_admin');
         }
 
         return $query;
@@ -156,6 +190,12 @@ class UsersIndex extends Component
             ->paginate(20);
 
         return view('livewire.users-index', compact('users'))
-            ->layout('layouts.app', ['title' => 'Utilisateurs']);
+            ->layout('layouts.app', ['title' => 'Utilisateurs'])
+            ->with([
+                'comptesTotalActuels' => $this->comptesTotalActuels(),
+                'limiteComptesTotal'  => $this->limiteComptesTotal(),
+                'comptesAdminActuels' => $this->comptesAdminActuels(),
+                'limiteComptesAdmin'  => $this->limiteComptesAdmin(),
+            ]);
     }
 }

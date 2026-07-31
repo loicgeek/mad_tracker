@@ -42,21 +42,39 @@
         </div>
     </div>
 
-    {{-- Groupe : Comptes --}}
+    {{-- Groupe : Limites & abonnement (réservé au super administrateur / éditeur) --}}
+    @if(auth()->user()->isSuperAdmin())
     <div class="card border-t-4 border-amber-500">
         <div class="card-header bg-amber-50 border-b border-amber-200">
-            <h3 class="font-semibold text-amber-800">Comptes &amp; échéances</h3>
-            <p class="text-xs text-slate-500 mt-0.5">Rappel avant expiration d'un abonnement de compte.</p>
+            <h3 class="font-semibold text-amber-800">Limites &amp; abonnement</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Réservé à l'éditeur de la plateforme — définit ce que le client peut créer sous son abonnement actuel.</p>
         </div>
         <div class="card-body space-y-5">
-            <div class="form-group" style="max-width:200px">
-                <label class="form-label">Rappel avant échéance (jours)</label>
-                <input wire:model="echeance_rappel_jours" type="number" min="1" max="90" class="form-input">
-                @error('echeance_rappel_jours') <p class="form-error">{{ $message }}</p> @enderror
-                <p class="text-xs text-slate-400 mt-1">Un rappel est envoyé au super administrateur ce nombre de jours avant l'échéance d'un compte.</p>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="form-group">
+                    <label class="form-label">Comptes administrateur max</label>
+                    <input wire:model="limite_comptes_admin" type="number" min="0" max="100" class="form-input">
+                    @error('limite_comptes_admin') <p class="form-error">{{ $message }}</p> @enderror
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Comptes utilisateur max (total)</label>
+                    <input wire:model="limite_comptes_total" type="number" min="1" max="1000" class="form-input">
+                    @error('limite_comptes_total') <p class="form-error">{{ $message }}</p> @enderror
+                </div>
+                <div class="form-group col-span-2">
+                    <label class="form-label">Rappel avant échéance d'un compte (jours)</label>
+                    <input wire:model="echeance_rappel_jours" type="number" min="1" max="90" class="form-input" style="max-width:200px">
+                    @error('echeance_rappel_jours') <p class="form-error">{{ $message }}</p> @enderror
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <button wire:click="saveEntitlements" type="button" class="btn-primary">
+                    Enregistrer les limites
+                </button>
             </div>
         </div>
     </div>
+    @endif
 
     {{-- Groupe : Général --}}
     <div class="card border-t-4 border-slate-500">

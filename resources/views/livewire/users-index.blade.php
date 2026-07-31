@@ -5,10 +5,10 @@
         <div>
             <h2 class="text-xl font-semibold text-slate-900">Utilisateurs</h2>
             <p class="text-sm text-slate-500 mt-0.5">
-                @if(auth()->user()->isSuperAdmin())
-                    Gestion des comptes de l'application
-                @else
-                    Comptes que vous avez créés ({{ auth()->user()->comptesCrees()->count() }}/{{ \App\Http\Livewire\UsersIndex::LIMITE_COMPTES_ADMINISTRATIF }})
+                Comptes : {{ $comptesTotalActuels }}/{{ $limiteComptesTotal }}
+                · dont administrateurs : {{ $comptesAdminActuels }}/{{ $limiteComptesAdmin }}
+                @if(!auth()->user()->isSuperAdmin())
+                    <span class="text-slate-400">(limites fixées par l'éditeur de la plateforme)</span>
                 @endif
             </p>
         </div>
