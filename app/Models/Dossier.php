@@ -235,7 +235,10 @@ class Dossier extends Model
 
     public function recalculerStatut(): void
     {
-        $ancienStatut = $this->statut;
+        // $this->statut peut être null en mémoire juste après un create() qui
+        // n'a pas fourni 'statut' explicitement : la valeur par défaut ('en_attente')
+        // n'existe alors qu'en base tant que le modèle n'a pas été rechargé.
+        $ancienStatut = $this->statut ?? 'en_attente';
 
         if ($this->etapeCloture?->complete) {
             $this->statut = 'finalise';

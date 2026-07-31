@@ -179,8 +179,14 @@ class ImporterDonneesLegacy extends Command
                 'cout_transitaire'  => $this->decimal($row[9] ?? null),
             ];
 
+            // Certains N° DE FACTURE se répètent pour des envois en plusieurs parties
+            // (ex. "DB 25/219" en P1 A / P1 B) : la clé d'idempotence doit inclure
+            // reference_affaire pour ne pas fusionner ces dossiers distincts.
             $dossier = $numFacture
-                ? Dossier::withTrashed()->where('numero_facture', $numFacture)->first()
+                ? Dossier::withTrashed()
+                    ->where('numero_facture', $numFacture)
+                    ->where('reference_affaire', $dossierData['reference_affaire'])
+                    ->first()
                 : null;
 
             if ($dossier) {
@@ -228,8 +234,8 @@ class ImporterDonneesLegacy extends Command
             if ($remarques !== '') {
                 Observation::create([
                     'dossier_id' => $dossier->id,
-                    'user_id'    => $user?->id,
-                    'etape'      => 'import',
+                    'user_id'    => $user?->id ?? User::first()?->id,
+                    'etape'      => 'general',
                     'contenu'    => $remarques,
                     'type'       => 'info',
                 ]);
