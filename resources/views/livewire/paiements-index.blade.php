@@ -1,126 +1,86 @@
-<div class="space-y-5">
+<div class="space-y-5 max-w-3xl">
 
     {{-- Header --}}
     <div class="flex items-center justify-between">
         <div>
-            <h2 class="text-xl font-semibold text-slate-900">Paiements &amp; échéances</h2>
-            <p class="text-sm text-slate-500 mt-0.5">Activation des comptes et suivi des abonnements</p>
+            <h2 class="text-xl font-semibold text-slate-900">Paiements &amp; abonnement</h2>
+            <p class="text-sm text-slate-500 mt-0.5">Abonnement de la plateforme (cette instance) — géré par l'éditeur</p>
         </div>
+        <button wire:click="openPaiementModal" class="btn-primary">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Enregistrer un paiement
+        </button>
     </div>
 
-    {{-- Search --}}
+    {{-- Statut --}}
     <div class="card">
-        <div class="card-body">
-            <input wire:model.live.debounce.300ms="search" type="search"
-                   class="form-input max-w-sm" placeholder="Nom, prénom, email…">
+        <div class="card-body flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-2">
+                    @if($actif)
+                        <span class="badge badge-green">Plateforme active</span>
+                    @else
+                        <span class="badge badge-red">Plateforme désactivée</span>
+                    @endif
+                </div>
+                @if($dateEcheance)
+                    @php $jours = now()->startOfDay()->diffInDays($dateEcheance->copy()->startOfDay(), false); @endphp
+                    <p class="text-sm text-slate-600 mt-2">
+                        Échéance : <span class="font-medium">{{ $dateEcheance->format('d/m/Y') }}</span>
+                        @if($jours < 0)
+                            <span class="badge badge-red ml-2">Expirée depuis {{ abs($jours) }}j</span>
+                        @elseif($jours <= 7)
+                            <span class="badge badge-yellow ml-2">Expire dans {{ $jours }}j</span>
+                        @else
+                            <span class="badge badge-blue ml-2">{{ $jours }}j restants</span>
+                        @endif
+                    </p>
+                @else
+                    <p class="text-sm text-slate-400 mt-2">Aucune échéance définie — enregistrez un premier paiement.</p>
+                @endif
+            </div>
+            <button wire:click="toggleActif"
+                    wire:confirm="{{ $actif ? 'Désactiver la plateforme pour tous les utilisateurs (sauf super_admin) ?' : 'Réactiver la plateforme ?' }}"
+                    class="btn-secondary">
+                {{ $actif ? 'Désactiver manuellement' : 'Activer manuellement' }}
+            </button>
         </div>
     </div>
 
-    {{-- Table --}}
+    {{-- Historique --}}
     <div class="table-wrapper">
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Nom</th>
-                    <th>Rôle</th>
-                    <th>Statut</th>
-                    <th>Échéance</th>
-                    <th></th>
+                    <th>Date</th>
+                    <th>Montant</th>
+                    <th>Méthode</th>
+                    <th>Mois couverts</th>
+                    <th>Échéance résultante</th>
+                    <th>Enregistré par</th>
                 </tr>
             </thead>
             <tbody>
-                @forelse($users as $u)
+                @forelse($paiements as $p)
                 <tr>
-                    <td class="font-semibold text-slate-800">{{ $u->nom_complet }}</td>
-                    <td class="text-slate-600">{{ \App\Models\User::ROLES[$u->role] ?? $u->role }}</td>
-                    <td>
-                        @if($u->actif)
-                            <span class="badge badge-green">Actif</span>
-                        @else
-                            <span class="badge badge-gray">Inactif</span>
-                        @endif
-                    </td>
-                    <td>
-                        @if(!$u->date_echeance)
-                            <span class="text-slate-400">—</span>
-                        @else
-                            @php $jours = now()->startOfDay()->diffInDays($u->date_echeance->startOfDay(), false); @endphp
-                            <div class="text-slate-600">{{ $u->date_echeance->format('d/m/Y') }}</div>
-                            @if($jours < 0)
-                                <span class="badge badge-red">Expiré depuis {{ abs($jours) }}j</span>
-                            @elseif($jours <= 7)
-                                <span class="badge badge-yellow">Expire dans {{ $jours }}j</span>
-                            @else
-                                <span class="badge badge-blue">{{ $jours }}j restants</span>
-                            @endif
-                        @endif
-                    </td>
-                    <td>
-                        <div class="flex items-center gap-1">
-                            <button wire:click="openPaiementModal({{ $u->id }})" class="btn-secondary !py-1 !px-2 text-xs">
-                                Enregistrer un paiement
-                            </button>
-                            <button wire:click="toggleActif({{ $u->id }})"
-                                    wire:confirm="{{ $u->actif ? 'Désactiver ce compte ?' : 'Activer ce compte ?' }}"
-                                    class="btn-icon" title="{{ $u->actif ? 'Désactiver' : 'Activer' }}">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/>
-                                </svg>
-                            </button>
-                            <button wire:click="toggleHistorique({{ $u->id }})" class="btn-icon" title="Historique">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </td>
+                    <td class="text-slate-600">{{ $p->date_paiement->format('d/m/Y') }}</td>
+                    <td class="font-semibold text-slate-800">{{ number_format($p->montant, 2) }} {{ $p->devise }}</td>
+                    <td class="text-slate-600">{{ $p->methode }}</td>
+                    <td class="text-slate-600">{{ $p->mois_couverts }}</td>
+                    <td class="text-slate-600">{{ $p->date_echeance_resultante->format('d/m/Y') }}</td>
+                    <td class="text-xs text-slate-500">{{ $p->saisiPar?->nom_complet ?? '—' }}</td>
                 </tr>
-                @if($historiqueUserId === $u->id)
-                <tr>
-                    <td colspan="5" class="bg-slate-50">
-                        @if($u->paiements->isEmpty())
-                            <p class="text-sm text-slate-400 py-2">Aucun paiement enregistré.</p>
-                        @else
-                            <table class="w-full text-xs">
-                                <thead>
-                                    <tr class="text-slate-500">
-                                        <th class="text-left py-1">Date</th>
-                                        <th class="text-left py-1">Montant</th>
-                                        <th class="text-left py-1">Méthode</th>
-                                        <th class="text-left py-1">Mois couverts</th>
-                                        <th class="text-left py-1">Échéance résultante</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($u->paiements as $p)
-                                    <tr>
-                                        <td class="py-1">{{ $p->date_paiement->format('d/m/Y') }}</td>
-                                        <td class="py-1">{{ number_format($p->montant, 2) }} {{ $p->devise }}</td>
-                                        <td class="py-1">{{ $p->methode }}</td>
-                                        <td class="py-1">{{ $p->mois_couverts }}</td>
-                                        <td class="py-1">{{ $p->date_echeance_resultante->format('d/m/Y') }}</td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        @endif
-                    </td>
-                </tr>
-                @endif
                 @empty
                 <tr>
-                    <td colspan="5" class="text-center py-12 text-slate-400">
-                        Aucun utilisateur trouvé
+                    <td colspan="6" class="text-center py-12 text-slate-400">
+                        Aucun paiement enregistré
                     </td>
                 </tr>
                 @endforelse
             </tbody>
         </table>
-    </div>
-
-    <div class="flex items-center justify-between">
-        <p class="text-sm text-slate-500">{{ $users->total() }} utilisateur(s)</p>
-        <div class="pagination-wrapper">{{ $users->links() }}</div>
     </div>
 
     {{-- ── Modal paiement ─────────────────────────────────────────── --}}
