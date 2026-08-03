@@ -201,11 +201,13 @@ class ImporterDonneesLegacy extends Command
                 $crees++;
             }
 
+            $dateMadReelle = $this->excelDate($row[14] ?? null);
+
             $dossier->etapeMadFournisseur()->updateOrCreate(
                 ['dossier_id' => $dossier->id],
                 [
                     'date_mad_prevue' => $this->excelDate($row[20] ?? null),
-                    'date_mad_reelle' => $this->excelDate($row[14] ?? null),
+                    'date_mad_reelle' => $dateMadReelle,
                     'docs_recus'      => $this->clean($row[12] ?? null) !== null,
                     'photos_recues'   => $this->clean($row[13] ?? null) !== null,
                     'coc_recu'        => $this->clean($row[16] ?? null) !== null,
@@ -214,9 +216,16 @@ class ImporterDonneesLegacy extends Command
             );
 
             $enlevement = $this->excelDate($row[17] ?? null);
+            $tempsTraitement = ($dateMadReelle && $enlevement)
+                ? \Carbon\Carbon::parse($dateMadReelle)->diffInDays(\Carbon\Carbon::parse($enlevement))
+                : null;
+
             $dossier->etapeTransitaire()->updateOrCreate(
                 ['dossier_id' => $dossier->id],
-                ['date_enlevement' => $enlevement]
+                [
+                    'date_enlevement'         => $enlevement,
+                    'temps_traitement_jours'  => $tempsTraitement,
+                ]
             );
 
             $podDate = $this->excelDate($row[18] ?? null);
