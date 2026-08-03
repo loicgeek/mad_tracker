@@ -63,6 +63,15 @@
                                           d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                 </svg>
                             </button>
+                            @if($u->id !== auth()->id())
+                            <button wire:click="toggleActif({{ $u->id }})"
+                                    wire:confirm="{{ $u->actif ? 'Désactiver ce compte ?' : 'Activer ce compte ?' }}"
+                                    class="btn-icon" title="{{ $u->actif ? 'Désactiver' : 'Activer' }}">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/>
+                                </svg>
+                            </button>
+                            @endif
                         </div>
                     </td>
                 </tr>

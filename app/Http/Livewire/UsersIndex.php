@@ -181,6 +181,19 @@ class UsersIndex extends Component
         $this->resetForm();
     }
 
+    public function toggleActif(int $id): void
+    {
+        if ($id === auth()->id()) {
+            $this->dispatch('notify', type: 'error', message: 'Vous ne pouvez pas désactiver votre propre compte.');
+            return;
+        }
+
+        $user = $this->baseQuery()->findOrFail($id);
+        $user->update(['actif' => ! $user->actif]);
+
+        $this->dispatch('notify', type: 'success', message: $user->actif ? 'Compte activé.' : 'Compte désactivé.');
+    }
+
     private function resetForm(): void
     {
         $this->nom = $this->prenom = $this->initiales = $this->email = $this->password = '';
