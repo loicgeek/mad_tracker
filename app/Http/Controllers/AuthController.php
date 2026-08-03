@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Abonnement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -20,9 +21,16 @@ class AuthController extends Controller
         ]);
 
         if (Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
-            if (! Auth::user()->actif) {
+            $user = Auth::user();
+
+            if (! $user->actif) {
                 Auth::logout();
                 return back()->withErrors(['email' => 'Compte désactivé — contactez votre administrateur.'])->onlyInput('email');
+            }
+
+            if (! $user->isSuperAdmin() && ! Abonnement::actif()) {
+                Auth::logout();
+                return back()->withErrors(['email' => 'Abonnement de la plateforme expiré — contactez votre fournisseur.'])->onlyInput('email');
             }
 
             $request->session()->regenerate();

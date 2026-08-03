@@ -26,7 +26,7 @@ Route::middleware('guest')->group(function () {
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
 // App (auth required)
-Route::middleware(['auth', 'account.active'])->group(function () {
+Route::middleware(['auth', 'account.active', 'abonnement.actif'])->group(function () {
     Route::get('/', Dashboard::class)->name('dashboard');
 
     Route::get('/dossiers', DossierIndex::class)->name('dossiers.index');

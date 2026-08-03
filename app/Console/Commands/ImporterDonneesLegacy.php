@@ -103,11 +103,13 @@ class ImporterDonneesLegacy extends Command
                 $counts['clients']++;
             }
             if ($fournisseur && ! Fournisseur::where('nom', $fournisseur)->exists()) {
-                Fournisseur::create(['nom' => $fournisseur]);
+                [$nomFournisseur, $paysFournisseur] = $this->splitNomPays($fournisseur);
+                Fournisseur::create(['nom' => $nomFournisseur, 'pays' => $paysFournisseur]);
                 $counts['fournisseurs']++;
             }
             if ($transitaire && ! Transporteur::where('nom', $transitaire)->exists()) {
-                Transporteur::create(['nom' => $transitaire]);
+                [$nomTransitaire, $paysTransitaire] = $this->splitNomPays($transitaire);
+                Transporteur::create(['nom' => $nomTransitaire, 'pays' => $paysTransitaire]);
                 $counts['transitaires']++;
             }
         }
@@ -287,6 +289,28 @@ class ImporterDonneesLegacy extends Command
         }
         $s = trim(str_replace("\xc2\xa0", ' ', (string) $v));
         return $s === '' ? null : $s;
+    }
+
+    /**
+     * Le référentiel fournisseurs/transitaires encode le pays après le dernier
+     * tiret du nom ("Autochim - France", "CEVA-France", "Cla-Val - France"…),
+     * avec un espacement incohérent autour du tiret. On coupe sur le DERNIER
+     * tiret (pas le premier) pour ne pas se tromper sur les noms contenant
+     * eux-mêmes un tiret ("Cla-Val", "Dyna-Flo Flow Control"). Le nom d'origine
+     * est conservé tel quel (avec le pays) ; seule la colonne pays est extraite.
+     *
+     * @return array{0: string, 1: ?string} [nom original inchangé, pays]
+     */
+    private function splitNomPays(string $value): array
+    {
+        $pos = strrpos($value, '-');
+        if ($pos === false) {
+            return [$value, null];
+        }
+
+        $pays = $this->clean(substr($value, $pos + 1));
+
+        return [$value, $pays];
     }
 
     private function decimal(mixed $v): ?float

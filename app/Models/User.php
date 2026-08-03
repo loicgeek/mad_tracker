@@ -22,14 +22,13 @@ class User extends Authenticatable
 
     protected $fillable = [
         'nom', 'prenom', 'initiales', 'email', 'password', 'role', 'actif',
-        'created_by', 'date_echeance',
+        'created_by',
     ];
 
     protected $hidden = ['password', 'remember_token'];
 
     protected $casts = [
-        'actif'         => 'boolean',
-        'date_echeance' => 'date',
+        'actif' => 'boolean',
     ];
 
     public function dossiers(): HasMany
@@ -40,11 +39,6 @@ class User extends Authenticatable
     public function observations(): HasMany
     {
         return $this->hasMany(Observation::class);
-    }
-
-    public function paiements(): HasMany
-    {
-        return $this->hasMany(Paiement::class);
     }
 
     public function creePar(): BelongsTo

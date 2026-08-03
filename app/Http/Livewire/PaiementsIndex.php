@@ -3,29 +3,20 @@
 namespace App\Http\Livewire;
 
 use Livewire\Component;
-use Livewire\WithPagination;
-use App\Models\User;
 use App\Models\Paiement;
+use App\Support\Abonnement;
 use Carbon\Carbon;
 
 class PaiementsIndex extends Component
 {
-    use WithPagination;
-
-    public string $search = '';
-
     // Modal "enregistrer un paiement"
     public bool $showPaiementModal = false;
-    public ?int $paiementUserId = null;
     public string $montant = '';
     public string $devise = 'XAF';
     public string $methode = 'virement';
     public string $date_paiement = '';
     public int $mois_couverts = 1;
     public string $notes = '';
-
-    // Historique
-    public ?int $historiqueUserId = null;
 
     protected function rules(): array
     {
@@ -39,11 +30,8 @@ class PaiementsIndex extends Component
         ];
     }
 
-    public function updatingSearch(): void { $this->resetPage(); }
-
-    public function openPaiementModal(int $userId): void
+    public function openPaiementModal(): void
     {
-        $this->paiementUserId = $userId;
         $this->montant = '';
         $this->devise = 'XAF';
         $this->methode = 'virement';
@@ -57,22 +45,17 @@ class PaiementsIndex extends Component
     public function closePaiementModal(): void
     {
         $this->showPaiementModal = false;
-        $this->paiementUserId = null;
     }
 
     public function enregistrerPaiement(): void
     {
         $this->validate();
 
-        $user = User::findOrFail($this->paiementUserId);
-
-        $base = $user->date_echeance && $user->date_echeance->isFuture()
-            ? $user->date_echeance
-            : now();
+        $dateEcheanceActuelle = Abonnement::dateEcheance();
+        $base = $dateEcheanceActuelle && $dateEcheanceActuelle->isFuture() ? $dateEcheanceActuelle : now();
         $nouvelleEcheance = Carbon::parse($base)->addMonths($this->mois_couverts);
 
         Paiement::create([
-            'user_id'                  => $user->id,
             'montant'                  => $this->montant,
             'devise'                   => $this->devise,
             'methode'                  => $this->methode,
@@ -83,39 +66,28 @@ class PaiementsIndex extends Component
             'saisi_par_id'             => auth()->id(),
         ]);
 
-        $user->update([
-            'date_echeance' => $nouvelleEcheance,
-            'actif'         => true,
-        ]);
+        Abonnement::activerJusquau($nouvelleEcheance);
 
-        $this->dispatch('notify', type: 'success', message: 'Paiement enregistré, compte activé jusqu\'au ' . $nouvelleEcheance->format('d/m/Y') . '.');
+        $this->dispatch('notify', type: 'success', message: 'Paiement enregistré, plateforme active jusqu\'au ' . $nouvelleEcheance->format('d/m/Y') . '.');
         $this->closePaiementModal();
     }
 
-    public function toggleActif(int $userId): void
+    public function toggleActif(): void
     {
-        $user = User::findOrFail($userId);
-        $user->update(['actif' => ! $user->actif]);
+        $nouvelEtat = ! Abonnement::actif();
+        Abonnement::definirActif($nouvelEtat);
 
-        $this->dispatch('notify', type: 'success', message: $user->actif ? 'Compte activé.' : 'Compte désactivé.');
-    }
-
-    public function toggleHistorique(int $userId): void
-    {
-        $this->historiqueUserId = $this->historiqueUserId === $userId ? null : $userId;
+        $this->dispatch('notify', type: 'success', message: $nouvelEtat ? 'Plateforme activée.' : 'Plateforme désactivée.');
     }
 
     public function render()
     {
-        $users = User::where('role', '!=', 'super_admin')
-            ->when($this->search, fn ($q) => $q->where('nom', 'like', "%{$this->search}%")
-                ->orWhere('prenom', 'like', "%{$this->search}%")
-                ->orWhere('email', 'like', "%{$this->search}%"))
-            ->with(['paiements' => fn ($q) => $q->latest('date_paiement')])
-            ->orderBy('nom')
-            ->paginate(20);
+        $paiements = Paiement::with('saisiPar')->latest('date_paiement')->get();
 
-        return view('livewire.paiements-index', compact('users'))
-            ->layout('layouts.app', ['title' => 'Paiements']);
+        return view('livewire.paiements-index', [
+            'paiements'    => $paiements,
+            'actif'        => Abonnement::actif(),
+            'dateEcheance' => Abonnement::dateEcheance(),
+        ])->layout('layouts.app', ['title' => 'Paiements']);
     }
 }
