@@ -278,7 +278,7 @@ class DossierForm extends Component
                 $d = Dossier::create($data);
                 // Notifier le responsable de l'attribution
                 if ($d->user) {
-                    $d->user->notify(new \App\Notifications\DossierAttribue(
+                    \App\Support\SafeNotifier::send($d->user, new \App\Notifications\DossierAttribue(
                         dossierId: $d->id,
                         reference: $d->reference,
                         clientNom: $d->client?->nom ?? '—',
@@ -310,7 +310,7 @@ class DossierForm extends Component
 
             // Notifier si la date de réception de validation vient d'être saisie
             if ($this->mad_date_reception_validation && ! $prevMad && $d->user) {
-                $d->user->notify(new \App\Notifications\ValidationDocumentRecu(
+                \App\Support\SafeNotifier::send($d->user, new \App\Notifications\ValidationDocumentRecu(
                     dossierId:     $d->id,
                     reference:     $d->reference,
                     clientNom:     $d->client?->nom ?? '—',

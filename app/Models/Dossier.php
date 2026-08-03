@@ -258,7 +258,7 @@ class Dossier extends Model
         $this->refreshAlertes();
 
         if ($this->statut !== $ancienStatut && $this->user) {
-            $this->user->notify(new \App\Notifications\DossierStatutChanged(
+            \App\Support\SafeNotifier::send($this->user, new \App\Notifications\DossierStatutChanged(
                 dossierId:          $this->id,
                 reference:          $this->reference,
                 clientNom:          $this->client?->nom ?? '—',
@@ -274,13 +274,15 @@ class Dossier extends Model
         if ($clot && $clot->pod_recue && $this->statut === 'finalise' && $ancienStatut !== 'finalise') {
             $dgEmail = \App\Models\Setting::get('dg_email');
             if ($dgEmail) {
-                \Illuminate\Support\Facades\Notification::route('mail', $dgEmail)
-                    ->notify(new \App\Notifications\PodRecueDG(
+                \App\Support\SafeNotifier::send(
+                    \Illuminate\Support\Facades\Notification::route('mail', $dgEmail),
+                    new \App\Notifications\PodRecueDG(
                         dossierId: $this->id,
                         reference: $this->reference,
                         clientNom: $this->client?->nom ?? '—',
                         datePod:   $clot->date_pod?->format('d/m/Y') ?? '—',
-                    ));
+                    )
+                );
             }
         }
     }

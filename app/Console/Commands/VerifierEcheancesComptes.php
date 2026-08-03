@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\EcheanceCompte;
+use App\Support\SafeNotifier;
 use Illuminate\Console\Command;
 
 class VerifierEcheancesComptes extends Command
@@ -28,9 +29,9 @@ class VerifierEcheancesComptes extends Command
             $user->update(['actif' => false]);
 
             $notification = new EcheanceCompte($user->id, $user->nom_complet, 'expire', $user->date_echeance->format('d/m/Y'));
-            $user->notify($notification);
+            SafeNotifier::send($user, $notification);
             foreach ($superAdmins as $admin) {
-                $admin->notify($notification);
+                SafeNotifier::send($admin, $notification);
             }
 
             $this->info("Compte désactivé : {$user->nom_complet} (échéance {$user->date_echeance->format('d/m/Y')})");
@@ -45,7 +46,7 @@ class VerifierEcheancesComptes extends Command
         foreach ($rappels as $user) {
             $notification = new EcheanceCompte($user->id, $user->nom_complet, 'rappel', $user->date_echeance->format('d/m/Y'));
             foreach ($superAdmins as $admin) {
-                $admin->notify($notification);
+                SafeNotifier::send($admin, $notification);
             }
 
             $this->info("Rappel envoyé pour : {$user->nom_complet} (échéance {$user->date_echeance->format('d/m/Y')})");
