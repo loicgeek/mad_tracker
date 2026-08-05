@@ -11,8 +11,10 @@ class Transporteur extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'nom', 'pays', 'contact_nom', 'contact_email', 'contact_phone', 'notes',
+        'nom', 'pays', 'contact_nom', 'contact_email', 'telephones', 'notes',
     ];
+
+    protected $casts = ['telephones' => 'array'];
 
     public function dossiers(): HasMany
     {

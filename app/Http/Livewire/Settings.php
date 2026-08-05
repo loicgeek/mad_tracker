@@ -26,7 +26,6 @@ class Settings extends Component
         return [
             'dg_email'               => 'nullable|email|max:255',
             'validation_delai_jours' => 'required|integer|min:1|max:365',
-            'app_nom'                => 'required|string|max:100',
         ];
     }
 
@@ -37,6 +36,16 @@ class Settings extends Component
         'validation_delai_jours.min'        => 'Le délai doit être d\'au moins 1 jour.',
         'app_nom.required'                  => 'Le nom de l\'application est obligatoire.',
     ];
+
+    /**
+     * Peut voir/éditer les paramètres généraux (nom de l'app) : réservé aux
+     * profils "gestion de la plateforme", pas les admins simples qui n'ont
+     * besoin que des notifications DG et du délai de validation.
+     */
+    public function peutGererGeneral(): bool
+    {
+        return auth()->user()->isSuperAdmin() || auth()->user()->isAdministratif();
+    }
 
     public function mount(): void
     {
@@ -55,7 +64,22 @@ class Settings extends Component
 
         Setting::set('dg_email',               $this->dg_email ?: null);
         Setting::set('validation_delai_jours', $this->validation_delai_jours);
-        Setting::set('app_nom',                $this->app_nom);
+
+        $this->dispatch('notify', type: 'success', message: 'Paramètres enregistrés.');
+    }
+
+    /**
+     * Nom de l'application : pas au même niveau de sensibilité que les
+     * entitlements, mais toujours réservé à super_admin/administratif —
+     * pas aux admins simples (cf. peutGererGeneral()).
+     */
+    public function saveGeneral(): void
+    {
+        abort_unless($this->peutGererGeneral(), 403);
+
+        $this->validate(['app_nom' => 'required|string|max:100']);
+
+        Setting::set('app_nom', $this->app_nom);
 
         $this->dispatch('notify', type: 'success', message: 'Paramètres enregistrés.');
     }

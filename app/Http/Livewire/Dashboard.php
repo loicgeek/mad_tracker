@@ -23,27 +23,58 @@ class Dashboard extends Component
         $this->loadCharts();
     }
 
+    /**
+     * gestionnaire/lecteur ne voient que les stats de leurs propres dossiers ;
+     * les autres rôles voient l'ensemble.
+     */
+    private function restreintASesDossiers(): bool
+    {
+        return in_array(auth()->user()->role, ['gestionnaire', 'lecteur'], true);
+    }
+
+    private function dossiersScopes()
+    {
+        return fn ($q) => $q->when($this->restreintASesDossiers(), fn ($q) => $q->where('user_id', auth()->id()));
+    }
+
+    /**
+     * Sous-requête dossier_id pour scoper les tables liées (etape_*) qui n'ont
+     * pas directement de user_id.
+     */
+    private function dossierIdsScope($query)
+    {
+        if (! $this->restreintASesDossiers()) {
+            return $query;
+        }
+
+        return $query->whereIn('dossier_id', function ($q) {
+            $q->select('id')->from('dossiers')->where('user_id', auth()->id());
+        });
+    }
+
     private function loadStats(): void
     {
-        $livresBase = DB::table('etape_livraisons')
-            ->whereNotNull('date_livraison_reelle')
-            ->whereNotNull('date_livraison_prevue');
+        $livresBase = $this->dossierIdsScope(
+            DB::table('etape_livraisons')
+                ->whereNotNull('date_livraison_reelle')
+                ->whereNotNull('date_livraison_prevue')
+        );
 
         $totalLivres = (clone $livresBase)->count();
 
         $this->stats = [
-            'total'        => Dossier::count(),
-            'en_cours'     => Dossier::enCours()->count(),
-            'finalises'    => Dossier::finalises()->count(),
-            'avec_alertes' => Dossier::withAlertes()->count(),
+            'total'        => Dossier::query()->tap($this->dossiersScopes())->count(),
+            'en_cours'     => Dossier::enCours()->tap($this->dossiersScopes())->count(),
+            'finalises'    => Dossier::finalises()->tap($this->dossiersScopes())->count(),
+            'avec_alertes' => Dossier::withAlertes()->tap($this->dossiersScopes())->count(),
             'clients'      => Client::count(),
             'fournisseurs' => Fournisseur::count(),
             'moy_traitement' => round(
-                DB::table('etape_transitaires')
-                    ->whereNotNull('temps_traitement_jours')
-                    ->avg('temps_traitement_jours') ?? 0, 1
+                $this->dossierIdsScope(
+                    DB::table('etape_transitaires')->whereNotNull('temps_traitement_jours')
+                )->avg('temps_traitement_jours') ?? 0, 1
             ),
-            'pod_en_attente' => Dossier::where('alerte_pod_manquante', true)->count(),
+            'pod_en_attente' => Dossier::where('alerte_pod_manquante', true)->tap($this->dossiersScopes())->count(),
             // Nouveaux KPIs
             'taux_livraison_temps' => $totalLivres > 0
                 ? round((clone $livresBase)->where('ecart_livraison_jours', '<=', 0)->count() / $totalLivres * 100, 1)
@@ -55,19 +86,19 @@ class Dashboard extends Component
                 (clone $livresBase)->avg('ecart_livraison_jours') ?? 0, 1
             ),
             'ecart_cout_total' => round(
-                DB::table('dossiers')
+                $this->dossiersScopes()(DB::table('dossiers')
                     ->whereNotNull('cout_reel')
                     ->whereNotNull('cout_transitaire')
-                    ->whereNull('deleted_at')
+                    ->whereNull('deleted_at'))
                     ->selectRaw('SUM(cout_reel - cout_transitaire) as ecart')
                     ->value('ecart') ?? 0, 2
             ),
             'ecart_cout_pct' => round(
-                DB::table('dossiers')
+                $this->dossiersScopes()(DB::table('dossiers')
                     ->whereNotNull('cout_reel')
                     ->whereNotNull('cout_transitaire')
                     ->where('cout_transitaire', '>', 0)
-                    ->whereNull('deleted_at')
+                    ->whereNull('deleted_at'))
                     ->selectRaw('AVG((cout_reel - cout_transitaire) / cout_transitaire * 100) as pct')
                     ->value('pct') ?? 0, 1
             ),
@@ -77,6 +108,7 @@ class Dashboard extends Component
     private function loadAlertes(): void
     {
         $this->alertes = Dossier::withAlertes()
+            ->tap($this->dossiersScopes())
             ->with(['client', 'user', 'etapeMadFournisseur', 'etapeLivraison'])
             ->orderByDesc('updated_at')
             ->limit(10)
@@ -102,6 +134,7 @@ class Dashboard extends Component
     {
         // Répartition par statut
         $statutData = Dossier::select('statut', DB::raw('count(*) as total'))
+            ->tap($this->dossiersScopes())
             ->groupBy('statut')
             ->pluck('total', 'statut')
             ->toArray();
@@ -114,11 +147,11 @@ class Dashboard extends Component
         ];
 
         // Coût prévu vs réel par mois
-        $coutsMensuels = DB::table('dossiers')
+        $coutsMensuels = $this->dossiersScopes()(DB::table('dossiers')
             ->whereNotNull('cout_reel')
             ->whereNotNull('cout_transitaire')
             ->whereNull('deleted_at')
-            ->where('created_at', '>=', now()->subYear())
+            ->where('created_at', '>=', now()->subYear()))
             ->select(
                 DB::raw('YEAR(created_at) as year'),
                 DB::raw('MONTH(created_at) as month'),
@@ -141,6 +174,7 @@ class Dashboard extends Component
                 DB::raw('MONTH(created_at) as month'),
                 DB::raw('count(*) as total')
             )
+            ->tap($this->dossiersScopes())
             ->where('created_at', '>=', now()->subYear())
             ->groupBy('year', 'month')
             ->orderBy('year')->orderBy('month')

@@ -29,48 +29,59 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 Route::middleware(['auth', 'account.active', 'abonnement.actif'])->group(function () {
     Route::get('/', Dashboard::class)->name('dashboard');
 
+    // Dossiers : accessibles à tous les rôles, mais scopés à leurs propres
+    // dossiers pour gestionnaire/lecteur (cf. DossierIndex/DossierShow/DossierForm).
+    // lecteur est en consultation seule : pas de création/modification.
     Route::get('/dossiers', DossierIndex::class)->name('dossiers.index');
-    Route::get('/dossiers/nouveau', DossierForm::class)->name('dossiers.create');
     Route::get('/dossiers/{id}', DossierShow::class)->name('dossiers.show');
-    Route::get('/dossiers/{id}/modifier', DossierForm::class)->name('dossiers.edit');
+    Route::middleware('role:super_admin,administratif,admin,gestionnaire')->group(function () {
+        Route::get('/dossiers/nouveau', DossierForm::class)->name('dossiers.create');
+        Route::get('/dossiers/{id}/modifier', DossierForm::class)->name('dossiers.edit');
+    });
 
-    Route::get('/analyses', Analyse::class)->name('analyses');
+    Route::get('/mon-profil', \App\Http\Livewire\ProfilPage::class)->name('profil');
 
-    // Référentiels
-    Route::get('/clients', ClientIndex::class)->name('clients.index');
-    Route::get('/fournisseurs', FournisseurIndex::class)->name('fournisseurs.index');
-    Route::get('/transporteurs', TransporteurIndex::class)->name('transporteurs.index');
-
-    // Notifications
+    // Notifications — personnelles, ouvertes à tous
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.readAll');
     Route::get('/notifications/{id}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
 
-    // Import
-    Route::get('/import', ImportData::class)->name('import');
-    Route::get('/import/template', function (\Illuminate\Http\Request $request) {
-        $type = $request->query('type', 'dossiers');
-        $export = match($type) {
-            'clients'      => new \App\Exports\ClientsTemplateExport(),
-            'fournisseurs' => new \App\Exports\FournisseursTemplateExport(),
-            default        => new \App\Exports\DossiersTemplateExport(),
-        };
-        return \Maatwebsite\Excel\Facades\Excel::download($export, "template-{$type}.xlsx");
-    })->name('import.template');
+    // Légal
+    Route::get('/a-propos', AboutPage::class)->name('about');
 
-    // Paramètres
-    Route::get('/parametres', \App\Http\Livewire\Settings::class)->name('settings');
-
-    // Utilisateurs & Paiements
+    // Utilisateurs & Paiements — gestion de la plateforme
     Route::get('/utilisateurs', UsersIndex::class)
         ->middleware('role:super_admin,administratif')->name('utilisateurs.index');
     Route::get('/paiements', PaiementsIndex::class)
         ->middleware('role:super_admin')->name('paiements.index');
 
-    // Exports
-    Route::get('/export/dossiers', [ExportController::class, 'dossiers'])->name('export.dossiers');
-    Route::get('/export/analyses', [ExportController::class, 'analyses'])->name('export.analyses');
-    Route::get('/export/dossier/{id}/pdf', [ExportController::class, 'dossierPdf'])->name('export.dossier.pdf');
+    // Gestionnaire/lecteur : uniquement dashboard + leurs dossiers. Le reste
+    // (référentiels, analyses, import, export, paramètres) est admin+ seulement.
+    Route::middleware('role:super_admin,administratif,admin')->group(function () {
+        Route::get('/analyses', Analyse::class)->name('analyses');
 
-    // Légal
-    Route::get('/a-propos', AboutPage::class)->name('about');
+        // Référentiels
+        Route::get('/clients', ClientIndex::class)->name('clients.index');
+        Route::get('/fournisseurs', FournisseurIndex::class)->name('fournisseurs.index');
+        Route::get('/transporteurs', TransporteurIndex::class)->name('transporteurs.index');
+
+        // Import
+        Route::get('/import', ImportData::class)->name('import');
+        Route::get('/import/template', function (\Illuminate\Http\Request $request) {
+            $type = $request->query('type', 'dossiers');
+            $export = match($type) {
+                'clients'      => new \App\Exports\ClientsTemplateExport(),
+                'fournisseurs' => new \App\Exports\FournisseursTemplateExport(),
+                default        => new \App\Exports\DossiersTemplateExport(),
+            };
+            return \Maatwebsite\Excel\Facades\Excel::download($export, "template-{$type}.xlsx");
+        })->name('import.template');
+
+        // Paramètres
+        Route::get('/parametres', \App\Http\Livewire\Settings::class)->name('settings');
+
+        // Exports
+        Route::get('/export/dossiers', [ExportController::class, 'dossiers'])->name('export.dossiers');
+        Route::get('/export/analyses', [ExportController::class, 'analyses'])->name('export.analyses');
+        Route::get('/export/dossier/{id}/pdf', [ExportController::class, 'dossierPdf'])->name('export.dossier.pdf');
+    });
 });

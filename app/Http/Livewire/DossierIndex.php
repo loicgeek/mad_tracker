@@ -48,9 +48,23 @@ class DossierIndex extends Component
         $this->sortField = $field;
     }
 
+    /**
+     * gestionnaire/lecteur ne voient et ne gèrent que leurs propres dossiers ;
+     * les autres rôles (admin, administratif, super_admin) voient tout.
+     */
+    private function restreintASesDossiers(): bool
+    {
+        return in_array(auth()->user()->role, ['gestionnaire', 'lecteur'], true);
+    }
+
     public function deleteDossier(int $id): void
     {
-        $dossier = Dossier::findOrFail($id);
+        $query = Dossier::query();
+        if ($this->restreintASesDossiers()) {
+            $query->where('user_id', auth()->id());
+        }
+
+        $dossier = $query->findOrFail($id);
         $dossier->delete();
         $this->dispatch('notify', type: 'success', message: 'Dossier supprimé.');
     }
@@ -68,6 +82,7 @@ class DossierIndex extends Component
                 'etapeLivraison',
                 'etapeCloture',
             ])
+            ->when($this->restreintASesDossiers(), fn($q) => $q->where('user_id', auth()->id()))
             ->when($this->search, fn($q) => $q->where(function ($q) {
                 $q->where('reference', 'like', "%{$this->search}%")
                   ->orWhere('reference_affaire', 'like', "%{$this->search}%")
@@ -87,7 +102,9 @@ class DossierIndex extends Component
             'dossiers'     => $query->paginate($this->perPage),
             'clients'      => Client::orderBy('nom')->get(),
             'responsables' => User::orderBy('nom')->get(),
-            'totalAlertes' => Dossier::withAlertes()->count(),
+            'totalAlertes' => Dossier::withAlertes()
+                ->when($this->restreintASesDossiers(), fn($q) => $q->where('user_id', auth()->id()))
+                ->count(),
         ])->layout('layouts.app', ['title' => 'Dossiers']);
     }
 }

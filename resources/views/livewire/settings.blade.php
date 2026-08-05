@@ -76,7 +76,8 @@
     </div>
     @endif
 
-    {{-- Groupe : Général --}}
+    {{-- Groupe : Général (pas pour les admins simples) --}}
+    @if($this->peutGererGeneral())
     <div class="card border-t-4 border-slate-500">
         <div class="card-header bg-slate-50 border-b border-slate-200">
             <h3 class="font-semibold text-slate-800">Général</h3>
@@ -87,8 +88,14 @@
                 <input wire:model="app_nom" type="text" class="form-input" placeholder="MAD Tracker">
                 @error('app_nom') <p class="form-error">{{ $message }}</p> @enderror
             </div>
+            <div class="flex justify-end">
+                <button wire:click="saveGeneral" type="button" class="btn-secondary">
+                    Enregistrer
+                </button>
+            </div>
         </div>
     </div>
+    @endif
 
     <div class="flex justify-end pt-2">
         <button wire:click="save" type="button" class="btn-primary">

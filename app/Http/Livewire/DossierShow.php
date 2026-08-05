@@ -16,12 +16,18 @@ class DossierShow extends Component
 
     public function mount(int $id): void
     {
-        $this->dossier = Dossier::with([
+        $query = Dossier::with([
             'client', 'user', 'fournisseur', 'transporteur',
             'etapeMadFournisseur', 'etapeFacturation',
             'etapeTransitaire', 'etapeLivraison', 'etapeCloture',
             'observations.user',
-        ])->findOrFail($id);
+        ]);
+
+        if (in_array(auth()->user()->role, ['gestionnaire', 'lecteur'], true)) {
+            $query->where('user_id', auth()->id());
+        }
+
+        $this->dossier = $query->findOrFail($id);
     }
 
     public function addObservation(): void

@@ -32,6 +32,8 @@ class ClientsImport implements ToCollection, WithHeadingRow, SkipsOnError
                 continue;
             }
 
+            $telephone = trim((string) ($row['contact_phone'] ?? $row['phone'] ?? $row['tel'] ?? ''));
+
             // updateOrCreate to allow re-imports without duplicates
             Client::updateOrCreate(
                 ['nom' => $nom],
@@ -39,7 +41,7 @@ class ClientsImport implements ToCollection, WithHeadingRow, SkipsOnError
                     'pays'          => trim((string) ($row['pays'] ?? $row['country'] ?? '')) ?: null,
                     'contact_nom'   => trim((string) ($row['contact_nom'] ?? $row['contact'] ?? '')) ?: null,
                     'contact_email' => trim((string) ($row['contact_email'] ?? $row['email'] ?? '')) ?: null,
-                    'contact_phone' => trim((string) ($row['contact_phone'] ?? $row['phone'] ?? $row['tel'] ?? '')) ?: null,
+                    'telephones'    => $telephone !== '' ? [$telephone] : null,
                     'notes'         => trim((string) ($row['notes'] ?? $row['remarques'] ?? '')) ?: null,
                 ]
             );

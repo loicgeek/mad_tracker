@@ -13,8 +13,12 @@
             </p>
         </div>
         <div class="flex items-center gap-3">
+            @if(in_array(auth()->user()->role, ['super_admin', 'administratif', 'admin']))
             <a href="{{ route('export.dossier.pdf', $dossier->id) }}" class="btn-secondary btn-sm">PDF</a>
+            @endif
+            @if(auth()->user()->role !== 'lecteur')
             <a href="{{ route('dossiers.edit', $dossier->id) }}" class="btn-primary btn-sm">Modifier</a>
+            @endif
         </div>
     </div>
 

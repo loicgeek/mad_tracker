@@ -49,6 +49,7 @@
                 Dossiers
             </a>
 
+            @if(in_array(auth()->user()->role, ['super_admin', 'administratif', 'admin']))
             <a href="{{ route('analyses') }}"
                class="sidebar-link {{ request()->routeIs('analyses') ? 'active' : '' }}">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -90,9 +91,11 @@
                     Transporteurs
                 </a>
             </div>
+            @endif
 
             <div class="pt-3">
                 <p class="px-3 text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1">Actions</p>
+                @if(auth()->user()->role !== 'lecteur')
                 <a href="{{ route('dossiers.create') }}"
                    class="sidebar-link text-brand-600 hover:text-brand-700 hover:bg-brand-50">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -100,6 +103,8 @@
                     </svg>
                     Nouveau dossier
                 </a>
+                @endif
+                @if(in_array(auth()->user()->role, ['super_admin', 'administratif', 'admin']))
                 <a href="{{ route('import') }}"
                    class="sidebar-link {{ request()->routeIs('import*') ? 'active' : '' }}">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -115,6 +120,7 @@
                     </svg>
                     Exporter Excel
                 </a>
+                @endif
             </div>
         </nav>
 
@@ -144,7 +150,20 @@
         </div>
         @endif
 
+        {{-- Mon profil --}}
+        <div class="px-3 pb-2">
+            <a href="{{ route('profil') }}"
+               class="sidebar-link {{ request()->routeIs('profil') ? 'active' : '' }}">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                Mon profil
+            </a>
+        </div>
+
         {{-- Paramètres --}}
+        @if(in_array(auth()->user()->role, ['super_admin', 'administratif', 'admin']))
         <div class="px-3 pb-2">
             <a href="{{ route('settings') }}"
                class="sidebar-link {{ request()->routeIs('settings') ? 'active' : '' }}">
@@ -156,6 +175,7 @@
                 Paramètres
             </a>
         </div>
+        @endif
 
         {{-- User --}}
         <div class="px-3 py-4 border-t border-slate-100">

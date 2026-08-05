@@ -147,10 +147,16 @@ class DossierForm extends Component
         $this->user_id = Auth::id() ?? 1;
 
         if ($id) {
-            $this->dossier = Dossier::with([
+            $query = Dossier::with([
                 'etapeMadFournisseur','etapeFacturation',
                 'etapeTransitaire','etapeLivraison','etapeCloture',
-            ])->findOrFail($id);
+            ]);
+
+            if (auth()->user()->role === 'gestionnaire') {
+                $query->where('user_id', auth()->id());
+            }
+
+            $this->dossier = $query->findOrFail($id);
             $this->isEdit = true;
             $this->fillFromModel();
         }
@@ -247,6 +253,12 @@ class DossierForm extends Component
 
     public function save(): void
     {
+        // Un gestionnaire ne peut pas s'attribuer un dossier à quelqu'un d'autre,
+        // même en trafiquant la requête — le champ Responsable est ignoré pour lui.
+        if (auth()->user()->role === 'gestionnaire') {
+            $this->user_id = auth()->id();
+        }
+
         $this->validate();
 
         DB::transaction(function () {

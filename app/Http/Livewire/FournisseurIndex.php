@@ -24,6 +24,7 @@ class FournisseurIndex extends Component
     public string $ville = '';
     public string $contact_nom = '';
     public string $contact_email = '';
+    public array $telephones = [''];
     public string $notes = '';
 
     protected function rules(): array
@@ -34,6 +35,7 @@ class FournisseurIndex extends Component
             'ville'         => 'nullable|max:100',
             'contact_nom'   => 'nullable|max:255',
             'contact_email' => 'nullable|email|max:255',
+            'telephones.*'  => 'nullable|max:50',
             'notes'         => 'nullable|max:2000',
         ];
     }
@@ -44,6 +46,20 @@ class FournisseurIndex extends Component
     {
         $this->sortDirection = ($this->sortField === $field && $this->sortDirection === 'asc') ? 'desc' : 'asc';
         $this->sortField = $field;
+    }
+
+    public function ajouterTelephone(): void
+    {
+        $this->telephones[] = '';
+    }
+
+    public function supprimerTelephone(int $index): void
+    {
+        unset($this->telephones[$index]);
+        $this->telephones = array_values($this->telephones);
+        if (empty($this->telephones)) {
+            $this->telephones = [''];
+        }
     }
 
     public function openCreate(): void
@@ -62,6 +78,7 @@ class FournisseurIndex extends Component
         $this->ville         = $f->ville ?? '';
         $this->contact_nom   = $f->contact_nom ?? '';
         $this->contact_email = $f->contact_email ?? '';
+        $this->telephones    = $f->telephones ?: [''];
         $this->notes         = $f->notes ?? '';
         $this->isEdit        = true;
         $this->showModal     = true;
@@ -71,12 +88,18 @@ class FournisseurIndex extends Component
     {
         $this->validate();
 
+        $telephones = array_values(array_filter(
+            array_map('trim', $this->telephones),
+            fn ($t) => $t !== ''
+        ));
+
         $data = [
             'nom'           => $this->nom,
             'pays'          => $this->pays ?: null,
             'ville'         => $this->ville ?: null,
             'contact_nom'   => $this->contact_nom ?: null,
             'contact_email' => $this->contact_email ?: null,
+            'telephones'    => $telephones ?: null,
             'notes'         => $this->notes ?: null,
         ];
 
@@ -112,6 +135,7 @@ class FournisseurIndex extends Component
     {
         $this->nom = $this->pays = $this->ville = '';
         $this->contact_nom = $this->contact_email = $this->notes = '';
+        $this->telephones = [''];
         $this->editingId = null;
         $this->resetValidation();
     }

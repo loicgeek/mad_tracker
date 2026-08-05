@@ -185,9 +185,9 @@
             <div class="card-body space-y-5">
                 <div class="grid grid-cols-2 gap-5">
                     <div class="form-group">
-                        <label class="form-label">Référence EPS <span class="text-red-500">*</span></label>
+                        <label class="form-label">Référence dossier <span class="text-red-500">*</span></label>
                         <input wire:model="reference" type="text" class="form-input font-mono"
-                               placeholder="Ex: EPS-2024-001">
+                               placeholder="Ex: DOS-2026-0001">
                         @error('reference') <p class="form-error">{{ $message }}</p> @enderror
                     </div>
                     <div class="form-group">

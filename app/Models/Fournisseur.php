@@ -10,7 +10,9 @@ class Fournisseur extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['nom', 'pays', 'ville', 'contact_nom', 'contact_email', 'notes'];
+    protected $fillable = ['nom', 'pays', 'ville', 'contact_nom', 'contact_email', 'telephones', 'notes'];
+
+    protected $casts = ['telephones' => 'array'];
 
     public function dossiers(): HasMany
     {

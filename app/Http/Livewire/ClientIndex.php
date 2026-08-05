@@ -24,18 +24,18 @@ class ClientIndex extends Component
     public string $pays = '';
     public string $contact_nom = '';
     public string $contact_email = '';
-    public string $contact_phone = '';
+    public array $telephones = [''];
     public string $notes = '';
 
     protected function rules(): array
     {
         return [
-            'nom'           => 'required|min:2|max:255',
-            'pays'          => 'nullable|max:100',
-            'contact_nom'   => 'nullable|max:255',
-            'contact_email' => 'nullable|email|max:255',
-            'contact_phone' => 'nullable|max:50',
-            'notes'         => 'nullable|max:2000',
+            'nom'             => 'required|min:2|max:255',
+            'pays'            => 'nullable|max:100',
+            'contact_nom'     => 'nullable|max:255',
+            'contact_email'   => 'nullable|email|max:255',
+            'telephones.*'    => 'nullable|max:50',
+            'notes'           => 'nullable|max:2000',
         ];
     }
 
@@ -45,6 +45,20 @@ class ClientIndex extends Component
     {
         $this->sortDirection = ($this->sortField === $field && $this->sortDirection === 'asc') ? 'desc' : 'asc';
         $this->sortField = $field;
+    }
+
+    public function ajouterTelephone(): void
+    {
+        $this->telephones[] = '';
+    }
+
+    public function supprimerTelephone(int $index): void
+    {
+        unset($this->telephones[$index]);
+        $this->telephones = array_values($this->telephones);
+        if (empty($this->telephones)) {
+            $this->telephones = [''];
+        }
     }
 
     public function openCreate(): void
@@ -62,7 +76,7 @@ class ClientIndex extends Component
         $this->pays         = $client->pays ?? '';
         $this->contact_nom  = $client->contact_nom ?? '';
         $this->contact_email= $client->contact_email ?? '';
-        $this->contact_phone= $client->contact_phone ?? '';
+        $this->telephones   = $client->telephones ?: [''];
         $this->notes        = $client->notes ?? '';
         $this->isEdit       = true;
         $this->showModal    = true;
@@ -72,12 +86,17 @@ class ClientIndex extends Component
     {
         $this->validate();
 
+        $telephones = array_values(array_filter(
+            array_map('trim', $this->telephones),
+            fn ($t) => $t !== ''
+        ));
+
         $data = [
             'nom'           => $this->nom,
             'pays'          => $this->pays ?: null,
             'contact_nom'   => $this->contact_nom ?: null,
             'contact_email' => $this->contact_email ?: null,
-            'contact_phone' => $this->contact_phone ?: null,
+            'telephones'    => $telephones ?: null,
             'notes'         => $this->notes ?: null,
         ];
 
@@ -112,7 +131,8 @@ class ClientIndex extends Component
     private function resetForm(): void
     {
         $this->nom = $this->pays = $this->contact_nom = '';
-        $this->contact_email = $this->contact_phone = $this->notes = '';
+        $this->contact_email = $this->notes = '';
+        $this->telephones = [''];
         $this->editingId = null;
         $this->resetValidation();
     }

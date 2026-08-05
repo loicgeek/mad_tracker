@@ -41,6 +41,7 @@
                     <th>Ville</th>
                     <th>Contact</th>
                     <th>Email</th>
+                    <th>Téléphone</th>
                     <th class="text-right">Dossiers</th>
                     <th></th>
                 </tr>
@@ -53,6 +54,7 @@
                     <td class="text-slate-600">{{ $f->ville ?? '—' }}</td>
                     <td class="text-slate-600">{{ $f->contact_nom ?? '—' }}</td>
                     <td class="text-xs text-slate-500">{{ $f->contact_email ?? '—' }}</td>
+                    <td class="text-xs text-slate-500">{{ $f->telephones ? implode(', ', $f->telephones) : '—' }}</td>
                     <td class="text-right">
                         @if($f->dossiers_count > 0)
                             <a href="{{ route('dossiers.index', ['filterFournisseur' => $f->id]) }}"
@@ -84,7 +86,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="text-center py-12 text-slate-400">Aucun fournisseur trouvé</td>
+                    <td colspan="8" class="text-center py-12 text-slate-400">Aucun fournisseur trouvé</td>
                 </tr>
                 @endforelse
             </tbody>
@@ -139,6 +141,27 @@
                         <label class="form-label">Email</label>
                         <input wire:model="contact_email" type="email" class="form-input">
                         @error('contact_email') <p class="form-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="form-group col-span-2">
+                        <label class="form-label">Téléphone(s)</label>
+                        <div class="space-y-2">
+                            @foreach($telephones as $i => $tel)
+                            <div class="flex items-center gap-2">
+                                <input wire:model="telephones.{{ $i }}" type="text" class="form-input" placeholder="+241 XX XX XX XX">
+                                @if(count($telephones) > 1)
+                                <button type="button" wire:click="supprimerTelephone({{ $i }})" class="btn-icon text-red-400 hover:text-red-600 hover:bg-red-50" title="Supprimer">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                                @endif
+                            </div>
+                            @error("telephones.{$i}") <p class="form-error">{{ $message }}</p> @enderror
+                            @endforeach
+                            <button type="button" wire:click="ajouterTelephone" class="text-sm text-brand-600 hover:underline">
+                                + Ajouter un numéro
+                            </button>
+                        </div>
                     </div>
                     <div class="form-group col-span-2">
                         <label class="form-label">Notes</label>

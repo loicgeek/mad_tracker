@@ -47,7 +47,7 @@
                     <td class="text-slate-600">{{ $t->pays ?? '—' }}</td>
                     <td class="text-slate-600">{{ $t->contact_nom ?? '—' }}</td>
                     <td class="text-xs text-slate-500">{{ $t->contact_email ?? '—' }}</td>
-                    <td class="text-xs text-slate-500">{{ $t->contact_phone ?? '—' }}</td>
+                    <td class="text-xs text-slate-500">{{ $t->telephones ? implode(', ', $t->telephones) : '—' }}</td>
                     <td class="text-right">
                         <span class="badge {{ $t->dossiers_count > 0 ? 'badge-blue' : 'badge-gray' }}">
                             {{ $t->dossiers_count }}
@@ -128,9 +128,26 @@
                         <input wire:model="contact_email" type="email" class="form-input">
                         @error('contact_email') <p class="form-error">{{ $message }}</p> @enderror
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Téléphone</label>
-                        <input wire:model="contact_phone" type="text" class="form-input">
+                    <div class="form-group col-span-2">
+                        <label class="form-label">Téléphone(s)</label>
+                        <div class="space-y-2">
+                            @foreach($telephones as $i => $tel)
+                            <div class="flex items-center gap-2">
+                                <input wire:model="telephones.{{ $i }}" type="text" class="form-input" placeholder="+241 XX XX XX XX">
+                                @if(count($telephones) > 1)
+                                <button type="button" wire:click="supprimerTelephone({{ $i }})" class="btn-icon text-red-400 hover:text-red-600 hover:bg-red-50" title="Supprimer">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                                @endif
+                            </div>
+                            @error("telephones.{$i}") <p class="form-error">{{ $message }}</p> @enderror
+                            @endforeach
+                            <button type="button" wire:click="ajouterTelephone" class="text-sm text-brand-600 hover:underline">
+                                + Ajouter un numéro
+                            </button>
+                        </div>
                     </div>
                     <div class="form-group col-span-2">
                         <label class="form-label">Notes</label>

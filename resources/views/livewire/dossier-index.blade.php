@@ -7,18 +7,22 @@
             <p class="text-sm text-slate-500 mt-0.5">Gestion et suivi des mises à disposition</p>
         </div>
         <div class="flex items-center gap-3">
+            @if(in_array(auth()->user()->role, ['super_admin', 'administratif', 'admin']))
             <a href="{{ route('export.dossiers') }}" class="btn-secondary">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                 </svg>
                 Exporter
             </a>
+            @endif
+            @if(auth()->user()->role !== 'lecteur')
             <a href="{{ route('dossiers.create') }}" class="btn-primary">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
                 Nouveau dossier
             </a>
+            @endif
         </div>
     </div>
 
@@ -225,16 +229,21 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                 </svg>
                             </a>
+                            @if(auth()->user()->role !== 'lecteur')
                             <a href="{{ route('dossiers.edit', $d->id) }}" class="btn-icon" title="Modifier">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                 </svg>
                             </a>
+                            @endif
+                            @if(in_array(auth()->user()->role, ['super_admin', 'administratif', 'admin']))
                             <a href="{{ route('export.dossier.pdf', $d->id) }}" class="btn-icon" title="PDF">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                                 </svg>
                             </a>
+                            @endif
+                            @if(auth()->user()->role !== 'lecteur')
                             <button wire:click="deleteDossier({{ $d->id }})"
                                     wire:confirm="Supprimer ce dossier ?"
                                     class="btn-icon text-red-400 hover:text-red-600 hover:bg-red-50" title="Supprimer">
@@ -242,6 +251,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                 </svg>
                             </button>
+                            @endif
                         </div>
                     </td>
                 </tr>

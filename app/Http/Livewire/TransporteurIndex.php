@@ -24,7 +24,7 @@ class TransporteurIndex extends Component
     public string $pays = '';
     public string $contact_nom = '';
     public string $contact_email = '';
-    public string $contact_phone = '';
+    public array $telephones = [''];
     public string $notes = '';
 
     protected function rules(): array
@@ -34,7 +34,7 @@ class TransporteurIndex extends Component
             'pays'          => 'nullable|max:100',
             'contact_nom'   => 'nullable|max:255',
             'contact_email' => 'nullable|email|max:255',
-            'contact_phone' => 'nullable|max:50',
+            'telephones.*'  => 'nullable|max:50',
             'notes'         => 'nullable|max:2000',
         ];
     }
@@ -45,6 +45,20 @@ class TransporteurIndex extends Component
     {
         $this->sortDirection = ($this->sortField === $field && $this->sortDirection === 'asc') ? 'desc' : 'asc';
         $this->sortField = $field;
+    }
+
+    public function ajouterTelephone(): void
+    {
+        $this->telephones[] = '';
+    }
+
+    public function supprimerTelephone(int $index): void
+    {
+        unset($this->telephones[$index]);
+        $this->telephones = array_values($this->telephones);
+        if (empty($this->telephones)) {
+            $this->telephones = [''];
+        }
     }
 
     public function openCreate(): void
@@ -62,7 +76,7 @@ class TransporteurIndex extends Component
         $this->pays          = $t->pays ?? '';
         $this->contact_nom   = $t->contact_nom ?? '';
         $this->contact_email = $t->contact_email ?? '';
-        $this->contact_phone = $t->contact_phone ?? '';
+        $this->telephones    = $t->telephones ?: [''];
         $this->notes         = $t->notes ?? '';
         $this->isEdit        = true;
         $this->showModal     = true;
@@ -72,12 +86,17 @@ class TransporteurIndex extends Component
     {
         $this->validate();
 
+        $telephones = array_values(array_filter(
+            array_map('trim', $this->telephones),
+            fn ($t) => $t !== ''
+        ));
+
         $data = [
             'nom'           => $this->nom,
             'pays'          => $this->pays ?: null,
             'contact_nom'   => $this->contact_nom ?: null,
             'contact_email' => $this->contact_email ?: null,
-            'contact_phone' => $this->contact_phone ?: null,
+            'telephones'    => $telephones ?: null,
             'notes'         => $this->notes ?: null,
         ];
 
@@ -112,7 +131,8 @@ class TransporteurIndex extends Component
     private function resetForm(): void
     {
         $this->nom = $this->pays = $this->contact_nom = '';
-        $this->contact_email = $this->contact_phone = $this->notes = '';
+        $this->contact_email = $this->notes = '';
+        $this->telephones = [''];
         $this->editingId = null;
         $this->resetValidation();
     }
