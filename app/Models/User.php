@@ -14,7 +14,6 @@ class User extends Authenticatable
 
     public const ROLES = [
         'super_admin'  => 'Super administrateur',
-        'administratif' => 'Administratif',
         'admin'        => 'Administrateur',
         'gestionnaire' => 'Gestionnaire',
         'lecteur'      => 'Lecteur',
@@ -59,11 +58,6 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
-    }
-
-    public function isAdministratif(): bool
-    {
-        return $this->role === 'administratif';
     }
 
     public function isSuperAdmin(): bool

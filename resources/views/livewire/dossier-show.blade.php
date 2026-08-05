@@ -13,7 +13,7 @@
             </p>
         </div>
         <div class="flex items-center gap-3">
-            @if(in_array(auth()->user()->role, ['super_admin', 'administratif', 'admin']))
+            @if(in_array(auth()->user()->role, ['super_admin', 'admin']))
             <a href="{{ route('export.dossier.pdf', $dossier->id) }}" class="btn-secondary btn-sm">PDF</a>
             @endif
             @if(auth()->user()->role !== 'lecteur')

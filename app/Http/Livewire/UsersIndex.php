@@ -43,7 +43,7 @@ class UsersIndex extends Component
     }
 
     /**
-     * Rôles qu'un administratif peut attribuer sont limités ; un super_admin peut tout attribuer.
+     * Rôles qu'un admin peut attribuer sont limités ; un super_admin peut tout attribuer.
      */
     private function rolesAssignables(): array
     {
@@ -206,7 +206,7 @@ class UsersIndex extends Component
 
     /**
      * super_admin (éditeur de la plateforme) voit tous les comptes, y compris les autres
-     * super_admin. L'administratif gère l'ensemble des comptes de son équipe (tout sauf
+     * super_admin. L'admin gère l'ensemble des comptes de son équipe (tout sauf
      * super_admin), sous les limites d'entitlement fixées par le super_admin.
      */
     private function baseQuery()

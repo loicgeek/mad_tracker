@@ -38,13 +38,13 @@ class Settings extends Component
     ];
 
     /**
-     * Peut voir/éditer les paramètres généraux (nom de l'app) : réservé aux
-     * profils "gestion de la plateforme", pas les admins simples qui n'ont
-     * besoin que des notifications DG et du délai de validation.
+     * Peut voir/éditer les paramètres généraux (nom de l'app) : super_admin et
+     * admin (rôle unifié, ex-"administratif" fusionné dedans). Seules les
+     * "Limites & abonnement" restent exclusives au super_admin (cf. saveEntitlements).
      */
     public function peutGererGeneral(): bool
     {
-        return auth()->user()->isSuperAdmin() || auth()->user()->isAdministratif();
+        return auth()->user()->isSuperAdmin() || auth()->user()->isAdmin();
     }
 
     public function mount(): void
@@ -70,8 +70,7 @@ class Settings extends Component
 
     /**
      * Nom de l'application : pas au même niveau de sensibilité que les
-     * entitlements, mais toujours réservé à super_admin/administratif —
-     * pas aux admins simples (cf. peutGererGeneral()).
+     * entitlements, mais toujours réservé à super_admin/admin (cf. peutGererGeneral()).
      */
     public function saveGeneral(): void
     {

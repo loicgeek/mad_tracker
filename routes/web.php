@@ -34,7 +34,7 @@ Route::middleware(['auth', 'account.active', 'abonnement.actif'])->group(functio
     // lecteur est en consultation seule : pas de création/modification.
     Route::get('/dossiers', DossierIndex::class)->name('dossiers.index');
     Route::get('/dossiers/{id}', DossierShow::class)->name('dossiers.show');
-    Route::middleware('role:super_admin,administratif,admin,gestionnaire')->group(function () {
+    Route::middleware('role:super_admin,admin,gestionnaire')->group(function () {
         Route::get('/dossiers/nouveau', DossierForm::class)->name('dossiers.create');
         Route::get('/dossiers/{id}/modifier', DossierForm::class)->name('dossiers.edit');
     });
@@ -50,13 +50,13 @@ Route::middleware(['auth', 'account.active', 'abonnement.actif'])->group(functio
 
     // Utilisateurs & Paiements — gestion de la plateforme
     Route::get('/utilisateurs', UsersIndex::class)
-        ->middleware('role:super_admin,administratif')->name('utilisateurs.index');
+        ->middleware('role:super_admin,admin')->name('utilisateurs.index');
     Route::get('/paiements', PaiementsIndex::class)
         ->middleware('role:super_admin')->name('paiements.index');
 
     // Gestionnaire/lecteur : uniquement dashboard + leurs dossiers. Le reste
     // (référentiels, analyses, import, export, paramètres) est admin+ seulement.
-    Route::middleware('role:super_admin,administratif,admin')->group(function () {
+    Route::middleware('role:super_admin,admin')->group(function () {
         Route::get('/analyses', Analyse::class)->name('analyses');
 
         // Référentiels

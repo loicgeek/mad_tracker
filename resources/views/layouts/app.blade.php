@@ -49,7 +49,7 @@
                 Dossiers
             </a>
 
-            @if(in_array(auth()->user()->role, ['super_admin', 'administratif', 'admin']))
+            @if(in_array(auth()->user()->role, ['super_admin', 'admin']))
             <a href="{{ route('analyses') }}"
                class="sidebar-link {{ request()->routeIs('analyses') ? 'active' : '' }}">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -104,7 +104,7 @@
                     Nouveau dossier
                 </a>
                 @endif
-                @if(in_array(auth()->user()->role, ['super_admin', 'administratif', 'admin']))
+                @if(in_array(auth()->user()->role, ['super_admin', 'admin']))
                 <a href="{{ route('import') }}"
                    class="sidebar-link {{ request()->routeIs('import*') ? 'active' : '' }}">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -125,7 +125,7 @@
         </nav>
 
         {{-- Administration --}}
-        @if(in_array(auth()->user()->role, ['super_admin', 'administratif']))
+        @if(in_array(auth()->user()->role, ['super_admin', 'admin']))
         <div class="px-3 pb-2">
             <a href="{{ route('utilisateurs.index') }}"
                class="sidebar-link {{ request()->routeIs('utilisateurs.*') ? 'active' : '' }}">
@@ -163,7 +163,7 @@
         </div>
 
         {{-- Paramètres --}}
-        @if(in_array(auth()->user()->role, ['super_admin', 'administratif', 'admin']))
+        @if(in_array(auth()->user()->role, ['super_admin', 'admin']))
         <div class="px-3 pb-2">
             <a href="{{ route('settings') }}"
                class="sidebar-link {{ request()->routeIs('settings') ? 'active' : '' }}">

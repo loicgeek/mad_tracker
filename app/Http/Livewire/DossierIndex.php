@@ -50,7 +50,7 @@ class DossierIndex extends Component
 
     /**
      * gestionnaire/lecteur ne voient et ne gèrent que leurs propres dossiers ;
-     * les autres rôles (admin, administratif, super_admin) voient tout.
+     * les autres rôles (admin, super_admin) voient tout.
      */
     private function restreintASesDossiers(): bool
     {

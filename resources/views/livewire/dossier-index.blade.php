@@ -7,7 +7,7 @@
             <p class="text-sm text-slate-500 mt-0.5">Gestion et suivi des mises à disposition</p>
         </div>
         <div class="flex items-center gap-3">
-            @if(in_array(auth()->user()->role, ['super_admin', 'administratif', 'admin']))
+            @if(in_array(auth()->user()->role, ['super_admin', 'admin']))
             <a href="{{ route('export.dossiers') }}" class="btn-secondary">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -236,7 +236,7 @@
                                 </svg>
                             </a>
                             @endif
-                            @if(in_array(auth()->user()->role, ['super_admin', 'administratif', 'admin']))
+                            @if(in_array(auth()->user()->role, ['super_admin', 'admin']))
                             <a href="{{ route('export.dossier.pdf', $d->id) }}" class="btn-icon" title="PDF">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
