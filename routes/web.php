@@ -29,15 +29,17 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 Route::middleware(['auth', 'account.active', 'abonnement.actif'])->group(function () {
     Route::get('/', Dashboard::class)->name('dashboard');
 
-    // Dossiers : accessibles à tous les rôles, mais scopés à leurs propres
-    // dossiers pour gestionnaire/lecteur (cf. DossierIndex/DossierShow/DossierForm).
-    // lecteur est en consultation seule : pas de création/modification.
+    // Dossiers : accessibles à tous les rôles. lecteur est en consultation
+    // seule (pas de création/modification).
+    // ⚠️ Les routes littérales (/nouveau, /{id}/modifier) doivent être
+    // déclarées AVANT /dossiers/{id}, sinon "nouveau" est capturé par le
+    // paramètre {id} et route vers DossierShow au lieu de DossierForm.
     Route::get('/dossiers', DossierIndex::class)->name('dossiers.index');
-    Route::get('/dossiers/{id}', DossierShow::class)->name('dossiers.show');
     Route::middleware('role:super_admin,admin,gestionnaire')->group(function () {
         Route::get('/dossiers/nouveau', DossierForm::class)->name('dossiers.create');
         Route::get('/dossiers/{id}/modifier', DossierForm::class)->name('dossiers.edit');
     });
+    Route::get('/dossiers/{id}', DossierShow::class)->name('dossiers.show');
 
     Route::get('/mon-profil', \App\Http\Livewire\ProfilPage::class)->name('profil');
 
