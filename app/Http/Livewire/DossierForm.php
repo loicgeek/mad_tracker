@@ -23,7 +23,6 @@ class DossierForm extends Component
     public int $currentStep = 1;
 
     // ── Step 1 : Informations générales ──
-    public string $reference = '';
     public int    $user_id = 0;
     public int    $client_id = 0;
     public ?int   $fournisseur_id = null;
@@ -109,9 +108,8 @@ class DossierForm extends Component
 
     protected function rules(): array
     {
-        $uniqueRef = 'unique:dossiers,reference,' . ($this->isEdit ? ($this->dossier?->id ?? 'NULL') : 'NULL');
         return [
-            'reference'                   => "required|string|max:255|{$uniqueRef}",
+            'reference_affaire'           => 'required|string|max:255',
             'user_id'                     => 'required|exists:users,id',
             'client_id'                   => 'required|exists:clients,id',
             'fournisseur_id'              => 'nullable|exists:fournisseurs,id',
@@ -147,16 +145,10 @@ class DossierForm extends Component
         $this->user_id = Auth::id() ?? 1;
 
         if ($id) {
-            $query = Dossier::with([
+            $this->dossier = Dossier::with([
                 'etapeMadFournisseur','etapeFacturation',
                 'etapeTransitaire','etapeLivraison','etapeCloture',
-            ]);
-
-            if (auth()->user()->role === 'gestionnaire') {
-                $query->where('user_id', auth()->id());
-            }
-
-            $this->dossier = $query->findOrFail($id);
+            ])->findOrFail($id);
             $this->isEdit = true;
             $this->fillFromModel();
         }
@@ -165,7 +157,6 @@ class DossierForm extends Component
     private function fillFromModel(): void
     {
         $d = $this->dossier;
-        $this->reference         = $d->reference;
         $this->user_id           = $d->user_id;
         $this->client_id         = $d->client_id;
         $this->fournisseur_id    = $d->fournisseur_id;
@@ -253,21 +244,14 @@ class DossierForm extends Component
 
     public function save(): void
     {
-        // Un gestionnaire ne peut pas s'attribuer un dossier à quelqu'un d'autre,
-        // même en trafiquant la requête — le champ Responsable est ignoré pour lui.
-        if (auth()->user()->role === 'gestionnaire') {
-            $this->user_id = auth()->id();
-        }
-
         $this->validate();
 
         DB::transaction(function () {
             $data = [
-                'reference'        => $this->reference,
                 'user_id'          => $this->user_id,
                 'client_id'        => $this->client_id,
                 'fournisseur_id'   => $this->fournisseur_id ?: null,
-                'reference_affaire'=> $this->reference_affaire ?: null,
+                'reference_affaire'=> $this->reference_affaire,
                 'pays_destination' => $this->pays_destination ?: null,
                 'incoterm'             => $this->incoterm,
                 'incoterm_lieu'        => $this->incoterm_lieu ?: null,
@@ -287,12 +271,12 @@ class DossierForm extends Component
                 $this->dossier->update($data);
                 $d = $this->dossier;
             } else {
-                $d = Dossier::create($data);
+                $d = Dossier::create(array_merge($data, ['reference' => Dossier::genererReference()]));
                 // Notifier le responsable de l'attribution
                 if ($d->user) {
                     \App\Support\SafeNotifier::send($d->user, new \App\Notifications\DossierAttribue(
                         dossierId: $d->id,
-                        reference: $d->reference,
+                        reference: $d->reference_affaire,
                         clientNom: $d->client?->nom ?? '—',
                     ));
                 }
@@ -324,7 +308,7 @@ class DossierForm extends Component
             if ($this->mad_date_reception_validation && ! $prevMad && $d->user) {
                 \App\Support\SafeNotifier::send($d->user, new \App\Notifications\ValidationDocumentRecu(
                     dossierId:     $d->id,
-                    reference:     $d->reference,
+                    reference:     $d->reference_affaire,
                     clientNom:     $d->client?->nom ?? '—',
                     dateReception: now()->parse($this->mad_date_reception_validation)->format('d/m/Y'),
                 ));

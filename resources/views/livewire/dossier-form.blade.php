@@ -185,10 +185,9 @@
             <div class="card-body space-y-5">
                 <div class="grid grid-cols-2 gap-5">
                     <div class="form-group">
-                        <label class="form-label">Référence dossier <span class="text-red-500">*</span></label>
-                        <input wire:model="reference" type="text" class="form-input font-mono"
-                               placeholder="Ex: DOS-2026-0001">
-                        @error('reference') <p class="form-error">{{ $message }}</p> @enderror
+                        <label class="form-label">Référence affaire <span class="text-red-500">*</span></label>
+                        <input wire:model="reference_affaire" type="text" class="form-input" placeholder="190923-003AG">
+                        @error('reference_affaire') <p class="form-error">{{ $message }}</p> @enderror
                     </div>
                     <div class="form-group">
                         <label class="form-label">Type de commande</label>
@@ -234,10 +233,6 @@
                             @endforeach
                         </select>
                         @error('fournisseur_id') <p class="form-error">{{ $message }}</p> @enderror
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Référence affaire</label>
-                        <input wire:model="reference_affaire" type="text" class="form-input" placeholder="190923-003AG">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Pays de destination</label>

@@ -6,9 +6,9 @@
             <div class="flex items-center gap-3 mb-1">
                 <a href="{{ route('dossiers.index') }}" class="text-slate-400 hover:text-slate-600 text-sm">← Dossiers</a>
             </div>
-            <h2 class="text-2xl font-bold text-slate-900 font-mono">{{ $dossier->reference }}</h2>
+            <h2 class="text-2xl font-bold text-slate-900 font-mono">{{ $dossier->reference_affaire }}</h2>
             <p class="text-slate-500 text-sm mt-1">
-                {{ $dossier->reference_affaire }}
+                {{ $dossier->reference }}
                 @if($dossier->etapeFacturation?->numero_facture) · {{ $dossier->etapeFacturation->numero_facture }} @endif
             </p>
         </div>

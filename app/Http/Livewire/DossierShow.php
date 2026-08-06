@@ -16,18 +16,12 @@ class DossierShow extends Component
 
     public function mount(int $id): void
     {
-        $query = Dossier::with([
+        $this->dossier = Dossier::with([
             'client', 'user', 'fournisseur', 'transporteur',
             'etapeMadFournisseur', 'etapeFacturation',
             'etapeTransitaire', 'etapeLivraison', 'etapeCloture',
             'observations.user',
-        ]);
-
-        if (in_array(auth()->user()->role, ['gestionnaire', 'lecteur'], true)) {
-            $query->where('user_id', auth()->id());
-        }
-
-        $this->dossier = $query->findOrFail($id);
+        ])->findOrFail($id);
     }
 
     public function addObservation(): void
@@ -63,6 +57,6 @@ class DossierShow extends Component
     {
         return view('livewire.dossier-show', [
             'dossier' => $this->dossier,
-        ])->layout('layouts.app', ['title' => $this->dossier->reference]);
+        ])->layout('layouts.app', ['title' => $this->dossier->reference_affaire]);
     }
 }

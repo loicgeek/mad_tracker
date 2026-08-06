@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Dossier {{ $dossier->reference }}</title>
+    <title>Dossier {{ $dossier->reference_affaire }}</title>
     <style>
         body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #1e293b; margin: 0; }
         h1 { font-size: 18px; color: #1a3ef5; margin: 0 0 4px; }
@@ -26,8 +26,8 @@
 <table width="100%">
     <tr>
         <td>
-            <h1>{{ $dossier->reference }}</h1>
-            <p style="color:#64748b;margin:0">{{ $dossier->reference_affaire }} — {{ $dossier->numero_facture }}</p>
+            <h1>{{ $dossier->reference_affaire }}</h1>
+            <p style="color:#64748b;margin:0">{{ $dossier->reference }} — {{ $dossier->numero_facture }}</p>
         </td>
         <td align="right">
             <span class="badge badge-blue">{{ $dossier->statut_label }}</span>
@@ -105,7 +105,7 @@
 @endif
 
 <div class="footer">
-    KEHITAA SARL — MAD Tracker — {{ $dossier->reference }} — {{ now()->format('d/m/Y') }}
+    KEHITAA SARL — MAD Tracker — {{ $dossier->reference_affaire }} — {{ now()->format('d/m/Y') }}
 </div>
 
 </body>

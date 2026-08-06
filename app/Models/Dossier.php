@@ -260,7 +260,7 @@ class Dossier extends Model
         if ($this->statut !== $ancienStatut && $this->user) {
             \App\Support\SafeNotifier::send($this->user, new \App\Notifications\DossierStatutChanged(
                 dossierId:          $this->id,
-                reference:          $this->reference,
+                reference:          $this->reference_affaire,
                 clientNom:          $this->client?->nom ?? '—',
                 ancienStatut:       $ancienStatut,
                 nouveauStatut:      $this->statut,
@@ -278,7 +278,7 @@ class Dossier extends Model
                     \Illuminate\Support\Facades\Notification::route('mail', $dgEmail),
                     new \App\Notifications\PodRecueDG(
                         dossierId: $this->id,
-                        reference: $this->reference,
+                        reference: $this->reference_affaire,
                         clientNom: $this->client?->nom ?? '—',
                         datePod:   $clot->date_pod?->format('d/m/Y') ?? '—',
                     )

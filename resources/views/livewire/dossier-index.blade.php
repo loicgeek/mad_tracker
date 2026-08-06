@@ -102,9 +102,9 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th wire:click="sortBy('reference')" class="cursor-pointer select-none">
+                    <th wire:click="sortBy('reference_affaire')" class="cursor-pointer select-none">
                         Référence
-                        @if($sortField === 'reference')
+                        @if($sortField === 'reference_affaire')
                             <span>{{ $sortDirection === 'asc' ? '↑' : '↓' }}</span>
                         @endif
                     </th>
@@ -164,7 +164,7 @@
 
                 <tr @class(['bg-red-50/40' => $d->has_alerte])>
                     <td>
-                        <span class="font-mono text-xs font-semibold text-brand-700">{{ $d->reference }}</span>
+                        <span class="font-mono text-xs font-semibold text-brand-700">{{ $d->reference_affaire }}</span>
                         @if($d->numero_facture)
                             <br><span class="text-xs text-slate-400">{{ $d->numero_facture }}</span>
                         @endif
