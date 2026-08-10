@@ -29,6 +29,7 @@ class Dossier extends Model
     ];
 
     protected $casts = [
+        'date_promise_client'          => 'date',
         'poids'                        => 'decimal:2',
         'cout_transitaire'             => 'decimal:2',
         'cout_reel'                    => 'decimal:2',
