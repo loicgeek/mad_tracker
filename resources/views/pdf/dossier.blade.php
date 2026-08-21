@@ -61,7 +61,8 @@
 <div class="step">
     <h3>Étape 2 — Facturation {{ $fact->complete ? '✓' : '…' }}</h3>
     <p>Facture émise : {{ $fact->facture_emise ? 'OUI' : 'NON' }} | Paiement : {{ $fact->paiement_recu ? 'Reçu' : 'En attente' }}</p>
-    @if($fact->montant)<p>Montant : {{ number_format($fact->montant, 2) }} {{ $fact->devise }}</p>@endif
+    @if($fact->montant_client)<p>Montant client : {{ number_format($fact->montant_client, 2, '.', ' ') }} {{ $fact->devise_client }}</p>@endif
+    @if($fact->montant_fournisseur)<p>Montant fournisseur : {{ number_format($fact->montant_fournisseur, 2, '.', ' ') }} {{ $fact->devise_fournisseur }}</p>@endif
 </div>
 @endif
 
@@ -90,7 +91,6 @@
 <div class="step" style="border-left-color: {{ $clot->pod_recue ? '#22c55e' : '#eab308' }}">
     <h3>Étape 5 — Clôture POD {{ $clot->pod_recue ? '✓ FINALISÉ' : '…' }}</h3>
     <p>POD reçue : {{ $clot->pod_recue ? 'OUI' : 'NON' }} @if($clot->date_pod)| Date : {{ $clot->date_pod->format('d/m/Y') }}@endif</p>
-    @if($clot->pod_source)<p>Source : {{ $clot->pod_source }}</p>@endif
 </div>
 @endif
 

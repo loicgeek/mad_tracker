@@ -9,7 +9,7 @@ class EtapeFacturation extends Model
     protected $fillable = [
         'dossier_id', 'facture_emise', 'date_facturation',
         'numero_facture', 'date_echeance_facture',
-        'montant', 'devise', 'coc_coo',
+        'montant', 'devise', 'co_recu', 'coc_recu',
         'montant_client', 'devise_client',
         'montant_fournisseur', 'devise_fournisseur',
         'taux_change',
@@ -23,7 +23,8 @@ class EtapeFacturation extends Model
         'date_validation_facture'  => 'date',
         'date_paiement'            => 'date',
         'facture_emise'            => 'boolean',
-        'coc_coo'                  => 'boolean',
+        'co_recu'                  => 'boolean',
+        'coc_recu'                 => 'boolean',
         'validation_facture_client'=> 'boolean',
         'paiement_recu'            => 'boolean',
         'complete'                 => 'boolean',

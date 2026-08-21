@@ -26,6 +26,8 @@ class Dossier extends Model
         'alerte_retard_mad', 'alerte_facture_manquante',
         'alerte_transitaire_manquant', 'alerte_pod_manquante',
         'alerte_livraison_depassee', 'alerte_cout_reel_manquant',
+        'alerte_mad_reelle_manquante', 'alerte_validation_documents_manquante',
+        'alerte_co_coc_manquant', 'alerte_transitaire_infos_manquantes',
     ];
 
     protected $casts = [
@@ -39,7 +41,17 @@ class Dossier extends Model
         'alerte_pod_manquante'         => 'boolean',
         'alerte_livraison_depassee'    => 'boolean',
         'alerte_cout_reel_manquant'    => 'boolean',
+        'alerte_mad_reelle_manquante'            => 'boolean',
+        'alerte_validation_documents_manquante'  => 'boolean',
+        'alerte_co_coc_manquant'                 => 'boolean',
+        'alerte_transitaire_infos_manquantes'    => 'boolean',
     ];
+
+    /**
+     * Les alertes ne s'appliquent qu'aux dossiers créés à partir de cette date
+     * (demande client explicite : pas de bruit rétroactif sur l'historique repris).
+     */
+    public const ALERTES_CUTOFF = '2026-09-01';
 
     // ── Relations ──────────────────────────────────────────────────
 
@@ -173,7 +185,11 @@ class Dossier extends Model
             || $this->alerte_transitaire_manquant
             || $this->alerte_pod_manquante
             || $this->alerte_livraison_depassee
-            || $this->alerte_cout_reel_manquant;
+            || $this->alerte_cout_reel_manquant
+            || $this->alerte_mad_reelle_manquante
+            || $this->alerte_validation_documents_manquante
+            || $this->alerte_co_coc_manquant
+            || $this->alerte_transitaire_infos_manquantes;
     }
 
     public function getIncotermLabelAttribute(): string
@@ -193,6 +209,23 @@ class Dossier extends Model
 
     public function refreshAlertes(): void
     {
+        // Pas de bruit sur l'historique repris : les alertes (toutes, existantes
+        // et nouvelles) ne s'appliquent qu'aux dossiers créés à partir du cutoff.
+        if (! $this->created_at || $this->created_at->lt(self::ALERTES_CUTOFF)) {
+            $this->alerte_retard_mad = false;
+            $this->alerte_facture_manquante = false;
+            $this->alerte_transitaire_manquant = false;
+            $this->alerte_pod_manquante = false;
+            $this->alerte_livraison_depassee = false;
+            $this->alerte_cout_reel_manquant = false;
+            $this->alerte_mad_reelle_manquante = false;
+            $this->alerte_validation_documents_manquante = false;
+            $this->alerte_co_coc_manquant = false;
+            $this->alerte_transitaire_infos_manquantes = false;
+            $this->saveQuietly();
+            return;
+        }
+
         $today = now()->toDateString();
 
         $mad  = $this->etapeMadFournisseur;
@@ -221,15 +254,40 @@ class Dossier extends Model
             && ! $liv->date_livraison_reelle
             && $liv->date_livraison_prevue < $today;
 
-        // Alerte POD si 4a (livraison) complète mais 4b (clôture/POD) pas renseignée
+        // POD manquante : toujours vide 5 jours après la date de livraison réelle
         $this->alerte_pod_manquante = $liv
-            && $liv->complete
-            && $clot
-            && ! $clot->pod_recue;
+            && $liv->date_livraison_reelle
+            && (! $clot || ! $clot->pod_recue)
+            && $liv->date_livraison_reelle->copy()->addDays(5)->isPast();
 
         // Coût réel manquant = transporteur renseigné mais coût réel absent
         $this->alerte_cout_reel_manquant = $this->transporteur_id
             && (! $this->cout_reel || $this->cout_reel == 0);
+
+        // MAD réelle manquante : toujours vide 2 jours après la date MAD fournisseur
+        $this->alerte_mad_reelle_manquante = $mad
+            && $mad->date_mad_fournisseur
+            && ! $mad->date_mad_reelle
+            && $mad->date_mad_fournisseur->copy()->addDays(2)->isPast();
+
+        // Validation documents : document pas validé, délai attendu dépassé
+        // depuis la date de demande de validation aux commerciaux.
+        $this->alerte_validation_documents_manquante = $mad
+            && $mad->date_demande_validation
+            && ! $mad->date_validation_document
+            && $mad->date_demande_validation->copy()->addDays($mad->delai_validation_jours ?? 5)->isPast();
+
+        // CO/COC reçu : pas les deux cases cochées, 2 jours après la date de facture
+        $this->alerte_co_coc_manquant = $fact
+            && $fact->date_facturation
+            && ! ($fact->co_recu && $fact->coc_recu)
+            && $fact->date_facturation->copy()->addDays(2)->isPast();
+
+        // Infos transitaire : toujours vide 5 jours après la date de facturation
+        $this->alerte_transitaire_infos_manquantes = $fact
+            && $fact->date_facturation
+            && (! $trans || ! $trans->date_reception_infos_transitaire)
+            && $fact->date_facturation->copy()->addDays(5)->isPast();
 
         $this->saveQuietly();
     }
@@ -297,7 +355,12 @@ class Dossier extends Model
               ->orWhere('alerte_facture_manquante', true)
               ->orWhere('alerte_transitaire_manquant', true)
               ->orWhere('alerte_pod_manquante', true)
-              ->orWhere('alerte_livraison_depassee', true);
+              ->orWhere('alerte_livraison_depassee', true)
+              ->orWhere('alerte_cout_reel_manquant', true)
+              ->orWhere('alerte_mad_reelle_manquante', true)
+              ->orWhere('alerte_validation_documents_manquante', true)
+              ->orWhere('alerte_co_coc_manquant', true)
+              ->orWhere('alerte_transitaire_infos_manquantes', true);
         });
     }
 

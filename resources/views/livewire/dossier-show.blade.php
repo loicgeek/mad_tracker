@@ -82,15 +82,15 @@
             <p class="text-xs text-slate-500 mb-1">Coûts transport</p>
             <div class="space-y-1">
                 @if($dossier->cout_transitaire)
-                    <p class="text-sm text-slate-600">Prévu : <span class="font-semibold">{{ number_format($dossier->cout_transitaire, 2) }} €</span></p>
+                    <p class="text-sm text-slate-600">Prévu : <span class="font-semibold">{{ number_format($dossier->cout_transitaire, 2, '.', ' ') }} €</span></p>
                 @endif
                 @if($dossier->cout_reel)
-                    <p class="text-sm text-slate-600">Réel : <span class="font-semibold">{{ number_format($dossier->cout_reel, 2) }} €</span></p>
+                    <p class="text-sm text-slate-600">Réel : <span class="font-semibold">{{ number_format($dossier->cout_reel, 2, '.', ' ') }} €</span></p>
                 @endif
                 @if($dossier->cout_transitaire && $dossier->cout_reel)
                     @php $ecart = $dossier->cout_reel - $dossier->cout_transitaire; @endphp
                     <p class="text-xs {{ $ecart > 0 ? 'text-red-500' : 'text-emerald-600' }} font-medium">
-                        Écart : {{ $ecart > 0 ? '+' : '' }}{{ number_format($ecart, 2) }} €
+                        Écart : {{ $ecart > 0 ? '+' : '' }}{{ number_format($ecart, 2, '.', ' ') }} €
                     </p>
                 @endif
             </div>
@@ -111,6 +111,10 @@
             @if($dossier->alerte_transitaire_manquant) <span class="badge badge-yellow">Transitaire manquant</span>@endif
             @if($dossier->alerte_livraison_depassee)   <span class="badge badge-red">Livraison dépassée</span>@endif
             @if($dossier->alerte_pod_manquante)        <span class="badge badge-yellow">POD manquante</span>@endif
+            @if($dossier->alerte_mad_reelle_manquante)           <span class="badge badge-yellow">MAD réelle manquante</span>@endif
+            @if($dossier->alerte_validation_documents_manquante) <span class="badge badge-yellow">Validation documents manquante</span>@endif
+            @if($dossier->alerte_co_coc_manquant)                <span class="badge badge-yellow">CO/COC manquant</span>@endif
+            @if($dossier->alerte_transitaire_infos_manquantes)   <span class="badge badge-yellow">Infos transitaire manquantes</span>@endif
         </div>
     </div>
     @endif
@@ -212,7 +216,7 @@
                 @endphp
 
                 {{-- ══ Étape 1 — MAD Fournisseur ══════════════════ --}}
-                @php $r = $resolveDot($mad, 'mad', $dossier->alerte_retard_mad); @endphp
+                @php $r = $resolveDot($mad, 'mad', $dossier->alerte_retard_mad || $dossier->alerte_mad_reelle_manquante || $dossier->alerte_validation_documents_manquante); @endphp
                 <div class="flex gap-4 py-5">
                     {{-- Accent bar --}}
                     <div class="w-1 rounded-full self-stretch {{ $mad ? $stepConfig['mad']['accentBar'] : 'bg-slate-200' }} flex-shrink-0"></div>
@@ -272,7 +276,7 @@
                 </div>
 
                 {{-- ══ Étape 2 — Facturation ═══════════════════════ --}}
-                @php $r = $resolveDot($fact, 'fact', $dossier->alerte_facture_manquante); @endphp
+                @php $r = $resolveDot($fact, 'fact', $dossier->alerte_facture_manquante || $dossier->alerte_co_coc_manquant); @endphp
                 <div class="flex gap-4 py-5">
                     <div class="w-1 rounded-full self-stretch {{ $fact ? $stepConfig['fact']['accentBar'] : 'bg-slate-200' }} flex-shrink-0"></div>
                     <div class="flex-shrink-0 mt-0.5">
@@ -303,10 +307,12 @@
                                     {{ $fact->date_echeance_facture->format('d/m/Y') }}
                                 </strong></p>
                             @endif
-                            @if($fact->montant) <p>Montant : <strong>{{ number_format($fact->montant, 2) }} {{ $fact->devise }}</strong></p> @endif
-                            @if($fact->coc_coo)
-                                <p><span class="badge badge-emerald badge-sm">COC / COO reçu</span></p>
-                            @endif
+                            @if($fact->montant_client) <p>Montant client : <strong>{{ number_format($fact->montant_client, 2, '.', ' ') }} {{ $fact->devise_client }}</strong></p> @endif
+                            @if($fact->montant_fournisseur) <p>Montant fournisseur : <strong>{{ number_format($fact->montant_fournisseur, 2, '.', ' ') }} {{ $fact->devise_fournisseur }}</strong></p> @endif
+                            <p class="flex items-center gap-2">
+                                @if($fact->co_recu) <span class="badge badge-green badge-sm">CO reçu</span> @endif
+                                @if($fact->coc_recu) <span class="badge badge-green badge-sm">COC reçu</span> @endif
+                            </p>
                             @if($fact->validation_facture_client)
                                 <p>Validée client : <strong class="text-emerald-600">OUI</strong>
                                     @if($fact->date_validation_facture) le <strong>{{ $fact->date_validation_facture->format('d/m/Y') }}</strong> @endif
@@ -327,7 +333,7 @@
                 </div>
 
                 {{-- ══ Étape 3 — Transitaire ═══════════════════════ --}}
-                @php $r = $resolveDot($trans, 'trans', $dossier->alerte_transitaire_manquant); @endphp
+                @php $r = $resolveDot($trans, 'trans', $dossier->alerte_transitaire_manquant || $dossier->alerte_transitaire_infos_manquantes); @endphp
                 <div class="flex gap-4 py-5">
                     <div class="w-1 rounded-full self-stretch {{ $trans ? $stepConfig['trans']['accentBar'] : 'bg-slate-200' }} flex-shrink-0"></div>
                     <div class="flex-shrink-0 mt-0.5">
@@ -435,8 +441,6 @@
                                 </span>
                             </p>
                             @if($clot->date_pod) <p>Date : <strong>{{ $clot->date_pod->format('d/m/Y') }}</strong></p> @endif
-                            @if($clot->pod_reference) <p>Référence : {{ $clot->pod_reference }}</p> @endif
-                            @if($clot->pod_source) <p>Source : {{ $clot->pod_source }}</p> @endif
                             @if($clot->observations) <p class="text-slate-600 italic">{{ $clot->observations }}</p> @endif
                         </div>
                         @else

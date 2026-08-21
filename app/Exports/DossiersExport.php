@@ -45,10 +45,11 @@ class DossiersExport implements FromQuery, WithHeadings, WithMapping, WithStyles
             'Statut',
             // Étape 1
             'MAD Prévue', 'MAD Réelle', 'Écart MAD (j)',
-            'Docs Reçus', 'Photos Reçues', 'COC Reçu', 'Obs. MAD Fourn.',
+            'Docs Reçus', 'Photos Reçues', 'Obs. MAD Fourn.',
             // Étape 2
             'Facturé', 'Date Facturation', 'N° Facture Interne',
-            'Paiement Reçu', 'Date Paiement', 'Montant', 'Devise', 'Obs. Facturation',
+            'Paiement Reçu', 'Date Paiement', 'Montant', 'Devise',
+            'CO Reçu', 'COC Reçu', 'Obs. Facturation',
             // Étape 3
             'Transitaire Communiqué', 'Date Réception Infos',
             'Date Instructions', 'Date Enlèvement',
@@ -57,7 +58,7 @@ class DossiersExport implements FromQuery, WithHeadings, WithMapping, WithStyles
             'Livraison Prévue', 'Livraison Réelle', 'Écart Livraison (j)',
             'Mode Transport', 'AWB/BL', 'Motif Retard', 'Obs. Livraison',
             // Étape 5
-            'POD Reçue', 'Date POD', 'Réf. POD', 'Source POD', 'Obs. Clôture',
+            'POD Reçue', 'Date POD', 'Obs. Clôture',
         ];
     }
 
@@ -96,7 +97,6 @@ class DossiersExport implements FromQuery, WithHeadings, WithMapping, WithStyles
             $mad?->ecart_jours,
             $mad?->docs_recus    ? 'OUI' : 'NON',
             $mad?->photos_recues ? 'OUI' : 'NON',
-            $mad?->coc_recu      ? 'OUI' : 'NON',
             $mad?->observations,
             // Facturation
             $fact?->facture_emise   ? 'OUI' : 'NON',
@@ -104,8 +104,10 @@ class DossiersExport implements FromQuery, WithHeadings, WithMapping, WithStyles
             $fact?->numero_facture_interne,
             $fact?->paiement_recu   ? 'OUI' : 'NON',
             $fact?->date_paiement?->format('d/m/Y'),
-            $fact?->montant,
-            $fact?->devise,
+            $fact?->montant_client,
+            $fact?->devise_client,
+            $fact?->co_recu  ? 'OUI' : 'NON',
+            $fact?->coc_recu ? 'OUI' : 'NON',
             $fact?->observations,
             // Transitaire
             $trans?->transitaire_communique ? 'OUI' : 'NON',
@@ -125,8 +127,6 @@ class DossiersExport implements FromQuery, WithHeadings, WithMapping, WithStyles
             // Clôture
             $clot?->pod_recue  ? 'OUI' : 'NON',
             $clot?->date_pod?->format('d/m/Y'),
-            $clot?->pod_reference,
-            $clot?->pod_source,
             $clot?->observations,
         ];
     }

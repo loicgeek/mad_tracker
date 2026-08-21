@@ -45,7 +45,6 @@ class DossierForm extends Component
     public string $mad_nom_valideur = '';
     public string $mad_date_validation_document = '';
     public string $mad_date_demande_validation = '';
-    public string $mad_date_reception_validation = '';
     public int    $mad_delai_validation_jours = 5;
     public string $mad_observations = '';
     public bool   $mad_complete = false;
@@ -55,7 +54,8 @@ class DossierForm extends Component
     public string $fact_date = '';
     public string $fact_numero_facture = '';
     public string $fact_date_echeance = '';
-    public bool   $fact_coc_coo = false;
+    public bool   $fact_co_recu = false;
+    public bool   $fact_coc_recu = false;
     public string $fact_montant_client = '';
     public string $fact_devise_client = 'EUR';
     public string $fact_montant_fournisseur = '';
@@ -101,8 +101,6 @@ class DossierForm extends Component
     // ── Step 4 suite : Clôture ──
     public bool   $clot_pod_recue = false;
     public string $clot_date_pod = '';
-    public string $clot_reference = '';
-    public string $clot_source = '';
     public string $clot_observations = '';
     public bool   $clot_complete = false;
 
@@ -124,7 +122,6 @@ class DossierForm extends Component
             'mad_date_reelle'              => 'nullable|date',
             'mad_date_validation_document' => 'nullable|date',
             'mad_date_demande_validation'  => 'nullable|date',
-            'mad_date_reception_validation'=> 'nullable|date',
             'mad_delai_validation_jours'   => 'nullable|integer|min:1|max:365',
             'fact_date'                    => 'nullable|date',
             'fact_date_echeance'           => 'nullable|date',
@@ -186,7 +183,6 @@ class DossierForm extends Component
             $this->mad_nom_valideur              = $m->nom_valideur ?? '';
             $this->mad_date_validation_document  = $m->date_validation_document?->format('Y-m-d') ?? '';
             $this->mad_date_demande_validation   = $m->date_demande_validation?->format('Y-m-d') ?? '';
-            $this->mad_date_reception_validation = $m->date_reception_validation?->format('Y-m-d') ?? '';
             $this->mad_delai_validation_jours    = $m->delai_validation_jours ?? 5;
             $this->mad_observations              = $m->observations ?? '';
             $this->mad_complete                  = $m->complete;
@@ -197,7 +193,8 @@ class DossierForm extends Component
             $this->fact_date                  = $f->date_facturation?->format('Y-m-d') ?? '';
             $this->fact_numero_facture        = $f->numero_facture ?? '';
             $this->fact_date_echeance         = $f->date_echeance_facture?->format('Y-m-d') ?? '';
-            $this->fact_coc_coo               = $f->coc_coo;
+            $this->fact_co_recu               = $f->co_recu;
+            $this->fact_coc_recu              = $f->coc_recu;
             $this->fact_montant_client        = $f->montant_client ?? ($f->montant ?? '');
             $this->fact_devise_client         = $f->devise_client ?? ($f->devise ?? 'EUR');
             $this->fact_montant_fournisseur   = $f->montant_fournisseur ?? '';
@@ -235,8 +232,6 @@ class DossierForm extends Component
         if ($c = $d->etapeCloture) {
             $this->clot_pod_recue  = $c->pod_recue;
             $this->clot_date_pod   = $c->date_pod?->format('Y-m-d') ?? '';
-            $this->clot_reference  = $c->pod_reference ?? '';
-            $this->clot_source     = $c->pod_source ?? '';
             $this->clot_observations = $c->observations ?? '';
             $this->clot_complete   = $c->complete;
         }
@@ -285,7 +280,7 @@ class DossierForm extends Component
             $isNew = ! $this->isEdit;
 
             // Étape 1 — MAD Fournisseur
-            $prevMad = $d->etapeMadFournisseur?->date_reception_validation;
+            $prevMad = $d->etapeMadFournisseur?->date_validation_document;
             $madData = [
                 'date_mad_prevue'           => $this->mad_date_prevue ?: null,
                 'date_mad_fournisseur'      => $this->mad_date_fournisseur ?: null,
@@ -297,20 +292,19 @@ class DossierForm extends Component
                 'nom_valideur'              => $this->mad_nom_valideur ?: null,
                 'date_validation_document'  => $this->mad_date_validation_document ?: null,
                 'date_demande_validation'   => $this->mad_date_demande_validation ?: null,
-                'date_reception_validation' => $this->mad_date_reception_validation ?: null,
                 'delai_validation_jours'    => $this->mad_delai_validation_jours ?: 5,
                 'observations'              => $this->mad_observations ?: null,
                 'complete'                  => $this->mad_complete,
             ];
             $d->etapeMadFournisseur()->updateOrCreate(['dossier_id' => $d->id], $madData);
 
-            // Notifier si la date de réception de validation vient d'être saisie
-            if ($this->mad_date_reception_validation && ! $prevMad && $d->user) {
+            // Notifier si la date de validation du document vient d'être saisie
+            if ($this->mad_date_validation_document && ! $prevMad && $d->user) {
                 \App\Support\SafeNotifier::send($d->user, new \App\Notifications\ValidationDocumentRecu(
                     dossierId:     $d->id,
                     reference:     $d->reference_affaire,
                     clientNom:     $d->client?->nom ?? '—',
-                    dateReception: now()->parse($this->mad_date_reception_validation)->format('d/m/Y'),
+                    dateReception: now()->parse($this->mad_date_validation_document)->format('d/m/Y'),
                 ));
             }
 
@@ -320,7 +314,8 @@ class DossierForm extends Component
                 'date_facturation'          => $this->fact_date ?: null,
                 'numero_facture'            => $this->fact_numero_facture ?: null,
                 'date_echeance_facture'     => $this->fact_date_echeance ?: null,
-                'coc_coo'                   => $this->fact_coc_coo,
+                'co_recu'                   => $this->fact_co_recu,
+                'coc_recu'                  => $this->fact_coc_recu,
                 'montant_client'            => $this->fact_montant_client ?: null,
                 'devise_client'             => $this->fact_devise_client,
                 'montant_fournisseur'       => $this->fact_montant_fournisseur ?: null,
@@ -369,8 +364,6 @@ class DossierForm extends Component
             $d->etapeCloture()->updateOrCreate(['dossier_id' => $d->id], [
                 'pod_recue'     => $this->clot_pod_recue,
                 'date_pod'      => $this->clot_date_pod ?: null,
-                'pod_reference' => $this->clot_reference ?: null,
-                'pod_source'    => $this->clot_source ?: null,
                 'observations'  => $this->clot_observations ?: null,
                 'complete'      => $this->clot_complete,
             ]);

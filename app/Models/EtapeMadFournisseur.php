@@ -9,7 +9,7 @@ class EtapeMadFournisseur extends Model
     protected $fillable = [
         'dossier_id', 'date_mad_prevue', 'date_mad_fournisseur', 'date_mad_reelle',
         'docs_recus', 'docs_techniques_recus', 'photos_recues', 'photos_emballage_recues',
-        'date_validation_document', 'date_demande_validation', 'date_reception_validation',
+        'date_validation_document', 'date_demande_validation',
         'delai_validation_jours', 'nom_valideur', 'observations', 'complete',
     ];
     protected $casts = [
@@ -18,7 +18,6 @@ class EtapeMadFournisseur extends Model
         'date_mad_reelle'           => 'date',
         'date_validation_document'  => 'date',
         'date_demande_validation'   => 'date',
-        'date_reception_validation' => 'date',
         'delai_validation_jours'    => 'integer',
         'docs_recus'                => 'boolean',
         'docs_techniques_recus'     => 'boolean',
@@ -46,8 +45,8 @@ class EtapeMadFournisseur extends Model
 
     public function getValidationEnRetardAttribute(): bool
     {
-        if (! $this->date_demande_validation || $this->date_reception_validation) return false;
+        if (! $this->date_demande_validation || $this->date_validation_document) return false;
         $delai = $this->delai_validation_jours ?? 5;
-        return $this->date_demande_validation->addDays($delai)->isPast();
+        return $this->date_demande_validation->copy()->addDays($delai)->isPast();
     }
 }

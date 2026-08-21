@@ -3,7 +3,12 @@
     {{-- ── Header ───────────────────────────────────────────────── --}}
     <div class="flex items-center justify-between">
         <div>
-            <h2 class="text-xl font-semibold text-slate-900">{{ $title }}</h2>
+            <h2 class="text-xl font-semibold text-slate-900">
+                {{ $title }}
+                @if($isEdit && $reference_affaire)
+                    <span class="font-mono text-brand-700">— {{ $reference_affaire }}</span>
+                @endif
+            </h2>
             <p class="text-sm text-slate-500 mt-0.5">Remplissez les informations étape par étape</p>
         </div>
         <a href="{{ route('dossiers.index') }}" class="btn-secondary">
@@ -318,16 +323,11 @@
                 {{-- Validation des documents --}}
                 <div class="rounded-xl border border-blue-200 bg-blue-50/30 p-4 space-y-4">
                     <p class="text-sm font-semibold text-blue-800">Validation des documents</p>
-                    <div class="grid grid-cols-3 gap-5">
+                    <div class="grid grid-cols-2 gap-5">
                         <div class="form-group">
-                            <label class="form-label">Date de demande</label>
+                            <label class="form-label">Date de demande de validation aux commerciaux</label>
                             <input wire:model="mad_date_demande_validation" type="date" class="form-input">
                             @error('mad_date_demande_validation') <p class="form-error">{{ $message }}</p> @enderror
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Date de réception</label>
-                            <input wire:model="mad_date_reception_validation" type="date" class="form-input">
-                            @error('mad_date_reception_validation') <p class="form-error">{{ $message }}</p> @enderror
                         </div>
                         <div class="form-group">
                             <label class="form-label">Délai attendu (jours)</label>
@@ -437,10 +437,10 @@
                         <label class="form-label text-slate-400">Montants en EUR (calculés)</label>
                         <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1 text-sm text-slate-600">
                             @if($fact_montant_client)
-                                <div>Client : <span class="font-semibold">{{ number_format($fact_montant_client / ($fact_devise_client === 'EUR' ? 1 : $fact_taux_change), 2, ',', ' ') }} €</span></div>
+                                <div>Client : <span class="font-semibold">{{ number_format($fact_montant_client / ($fact_devise_client === 'EUR' ? 1 : $fact_taux_change), 2, '.', ' ') }} €</span></div>
                             @endif
                             @if($fact_montant_fournisseur)
-                                <div>Fournisseur : <span class="font-semibold">{{ number_format($fact_montant_fournisseur / ($fact_devise_fournisseur === 'EUR' ? 1 : $fact_taux_change), 2, ',', ' ') }} €</span></div>
+                                <div>Fournisseur : <span class="font-semibold">{{ number_format($fact_montant_fournisseur / ($fact_devise_fournisseur === 'EUR' ? 1 : $fact_taux_change), 2, '.', ' ') }} €</span></div>
                             @endif
                         </div>
                     </div>
@@ -450,8 +450,12 @@
 
             <div class="grid grid-cols-2 gap-4">
                 <label class="flex items-center gap-3 p-4 rounded-xl border border-purple-200 bg-purple-50/50 cursor-pointer hover:bg-purple-50">
-                    <input wire:model="fact_coc_coo" type="checkbox" class="rounded {{ $current['checkAccent'] }}">
-                    <span class="text-sm font-medium text-slate-700">COC / COO reçu</span>
+                    <input wire:model="fact_co_recu" type="checkbox" class="rounded {{ $current['checkAccent'] }}">
+                    <span class="text-sm font-medium text-slate-700">CO reçu</span>
+                </label>
+                <label class="flex items-center gap-3 p-4 rounded-xl border border-purple-200 bg-purple-50/50 cursor-pointer hover:bg-purple-50">
+                    <input wire:model="fact_coc_recu" type="checkbox" class="rounded {{ $current['checkAccent'] }}">
+                    <span class="text-sm font-medium text-slate-700">COC reçu</span>
                 </label>
             </div>
 
@@ -633,20 +637,10 @@
                     <span class="text-sm font-semibold text-teal-800">✓ POD reçue — clôture l'affaire</span>
                 </label>
 
-                <div class="grid grid-cols-3 gap-5">
-                    <div class="form-group">
-                        <label class="form-label">Date POD</label>
-                        <input wire:model="clot_date_pod" type="date" class="form-input">
-                        @error('clot_date_pod') <p class="form-error">{{ $message }}</p> @enderror
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Référence POD</label>
-                        <input wire:model="clot_reference" type="text" class="form-input">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Source POD</label>
-                        <input wire:model="clot_source" type="text" class="form-input" placeholder="DHL, UPS, Bolloré…">
-                    </div>
+                <div class="form-group" style="max-width:260px">
+                    <label class="form-label">Date POD</label>
+                    <input wire:model="clot_date_pod" type="date" class="form-input">
+                    @error('clot_date_pod') <p class="form-error">{{ $message }}</p> @enderror
                 </div>
 
                 <div class="form-group">

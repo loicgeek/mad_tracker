@@ -90,7 +90,7 @@
         <div class="card p-4 text-center">
             <p class="text-xs text-slate-500 mb-1">Écart coût total</p>
             <p class="text-2xl font-bold {{ $stats['ecart_cout_total'] > 0 ? 'text-red-500' : ($stats['ecart_cout_total'] < 0 ? 'text-emerald-600' : 'text-slate-400') }}">
-                {{ $stats['ecart_cout_total'] > 0 ? '+' : '' }}{{ number_format($stats['ecart_cout_total'], 0) }}<span class="text-sm ml-0.5">€</span>
+                {{ $stats['ecart_cout_total'] > 0 ? '+' : '' }}{{ number_format($stats['ecart_cout_total'], 0, '.', ' ') }}<span class="text-sm ml-0.5">€</span>
             </p>
         </div>
         <div class="card p-4 text-center">

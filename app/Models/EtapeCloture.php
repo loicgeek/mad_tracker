@@ -7,8 +7,7 @@ class EtapeCloture extends Model
 {
     protected $table = 'etape_clotures';
     protected $fillable = [
-        'dossier_id', 'pod_recue', 'date_pod',
-        'pod_reference', 'pod_source', 'observations', 'complete',
+        'dossier_id', 'pod_recue', 'date_pod', 'observations', 'complete',
     ];
     protected $casts = [
         'date_pod'  => 'date',

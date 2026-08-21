@@ -63,7 +63,7 @@
     {{-- ── Filters ──────────────────────────────────────────────── --}}
     <div class="card">
         <div class="card-body">
-            <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-7 gap-4">
                 <div class="md:col-span-2">
                     <input wire:model.live.debounce.300ms="search" type="search"
                            class="form-input" placeholder="Référence, affaire, client, fournisseur…">
@@ -77,6 +77,12 @@
                     <option value="enleve">Enlevé</option>
                     <option value="livre">Livré</option>
                     <option value="finalise">Finalisé</option>
+                </select>
+                <select wire:model.live="filterResponsable" class="form-select">
+                    <option value="">Tous les responsables</option>
+                    @foreach($responsables as $r)
+                        <option value="{{ $r->id }}">{{ $r->initiales }} — {{ $r->nom_complet }}</option>
+                    @endforeach
                 </select>
                 <select wire:model.live="filterClient" class="form-select">
                     <option value="">Tous les clients</option>

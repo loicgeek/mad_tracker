@@ -63,8 +63,6 @@ use Illuminate\Support\Facades\DB;
  *                  liv_observations ↔ obs_livraison
  *   Clôture      : clot_pod_recue ↔ pod_recue
  *                  clot_date_pod ↔ date_pod
- *                  clot_reference ↔ ref_pod
- *                  clot_source ↔ source_pod
  *                  clot_observations ↔ obs_cloture
  */
 class DossiersImport implements ToCollection, WithHeadingRow, SkipsOnError, WithChunkReading
@@ -271,8 +269,6 @@ class DossiersImport implements ToCollection, WithHeadingRow, SkipsOnError, With
             [
                 'pod_recue'     => $this->bool($this->col($row, 'clot_pod_recue', 'pod_recue')),
                 'date_pod'      => $this->date($this->col($row, 'clot_date_pod', 'date_pod')),
-                'pod_reference' => $this->str($this->col($row, 'clot_reference', 'ref_pod')),
-                'pod_source'    => $this->str($this->col($row, 'clot_source', 'source_pod')),
                 'observations'  => $this->str($this->col($row, 'clot_observations', 'obs_cloture')),
                 'complete'      => $this->bool($this->col($row, 'clot_complete')),
             ]

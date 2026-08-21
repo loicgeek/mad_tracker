@@ -40,7 +40,6 @@ class DossiersTemplateExport extends BaseTemplateExport
             'liv_applicable', 'liv_observations', 'liv_complete',
             // Étape 5 – Clôture
             'clot_pod_recue', 'clot_date_pod',
-            'clot_reference', 'clot_source',
             'clot_observations', 'clot_complete',
         ];
     }
@@ -66,7 +65,6 @@ class DossiersTemplateExport extends BaseTemplateExport
                 'aérien', 'AWB123456789',
                 'OUI', '', 'OUI',
                 'OUI', '20/02/2024',
-                'POD-REF-001', 'DHL',
                 '', 'OUI',
             ],
             [
@@ -87,7 +85,6 @@ class DossiersTemplateExport extends BaseTemplateExport
                 '', '',
                 'OUI', '', 'NON',
                 'NON', '',
-                '', '',
                 '', 'NON',
             ],
         ];

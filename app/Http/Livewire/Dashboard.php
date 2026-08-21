@@ -83,7 +83,7 @@ class Dashboard extends Component
             ->get()
             ->map(fn($d) => [
                 'id'        => $d->id,
-                'reference' => $d->reference,
+                'reference' => $d->reference_affaire,
                 'client'    => $d->client->nom ?? '-',
                 'statut'    => $d->statut_label,
                 'color'     => $d->statut_color,
@@ -93,6 +93,10 @@ class Dashboard extends Component
                     $d->alerte_transitaire_manquant? 'Transitaire manquant' : null,
                     $d->alerte_livraison_depassee  ? 'Livraison dépassée' : null,
                     $d->alerte_pod_manquante       ? 'POD manquante' : null,
+                    $d->alerte_mad_reelle_manquante           ? 'MAD réelle manquante' : null,
+                    $d->alerte_validation_documents_manquante ? 'Validation documents manquante' : null,
+                    $d->alerte_co_coc_manquant                ? 'CO/COC manquant' : null,
+                    $d->alerte_transitaire_infos_manquantes   ? 'Infos transitaire manquantes' : null,
                 ]),
             ])
             ->toArray();
