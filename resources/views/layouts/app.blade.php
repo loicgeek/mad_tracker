@@ -8,9 +8,12 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
-<body class="h-full flex bg-slate-50"
-      x-data="{ sidebarOpen: localStorage.getItem('sidebarOpen') !== '0' }"
-      x-init="$watch('sidebarOpen', v => localStorage.setItem('sidebarOpen', v ? '1' : '0'))">
+<body class="h-full flex bg-slate-50">
+    <div
+        class="contents"
+        x-data="{ sidebarOpen: localStorage.getItem('sidebarOpen') !== '0' }"
+        x-init="$watch('sidebarOpen', v => localStorage.setItem('sidebarOpen', v ? '1' : '0'))"
+    >
 
     {{-- ── Sidebar ─────────────────────────────────────────────── --}}
     <aside
@@ -342,6 +345,7 @@
             © {{ now()->year }} KEHITAA SARL — MAD Tracker. Tous droits réservés.
             <a href="{{ route('about') }}" class="text-slate-500 hover:underline">À propos</a>
         </footer>
+    </div>
     </div>
 
     @livewireScripts
