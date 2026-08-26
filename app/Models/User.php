@@ -7,6 +7,8 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Notifications\ResetPasswordNotification;
+use App\Support\SafeNotifier;
 
 class User extends Authenticatable
 {
@@ -63,5 +65,10 @@ class User extends Authenticatable
     public function isSuperAdmin(): bool
     {
         return $this->role === 'super_admin';
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        SafeNotifier::send($this, new ResetPasswordNotification($token));
     }
 }

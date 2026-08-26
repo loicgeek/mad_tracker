@@ -22,6 +22,10 @@
 
         <div class="card">
             <div class="card-body">
+                @if (session('status'))
+                    <div class="alert-success mb-5">{{ session('status') }}</div>
+                @endif
+
                 <form method="POST" action="{{ route('login.post') }}" class="space-y-5">
                     @csrf
 
@@ -51,6 +55,7 @@
                             <input type="checkbox" name="remember" class="rounded border-slate-300 text-brand-600">
                             <span class="text-sm text-slate-600">Se souvenir</span>
                         </label>
+                        <a href="{{ route('password.request') }}" class="text-sm text-brand-600 hover:underline">Mot de passe oublié ?</a>
                     </div>
 
                     <button type="submit" class="btn-primary w-full justify-center btn-lg">
