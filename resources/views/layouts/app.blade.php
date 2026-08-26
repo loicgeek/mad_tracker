@@ -8,10 +8,15 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
-<body class="h-full flex bg-slate-50">
+<body class="h-full flex bg-slate-50"
+      x-data="{ sidebarOpen: localStorage.getItem('sidebarOpen') !== '0' }"
+      x-init="$watch('sidebarOpen', v => localStorage.setItem('sidebarOpen', v ? '1' : '0'))">
 
     {{-- ── Sidebar ─────────────────────────────────────────────── --}}
-    <aside class="w-64 flex-shrink-0 bg-white border-r border-slate-200 flex flex-col h-screen sticky top-0">
+    <aside
+        :class="sidebarOpen ? 'w-64' : 'w-0 border-r-0'"
+        class="flex-shrink-0 bg-white border-r border-slate-200 flex flex-col h-screen sticky top-0 overflow-hidden transition-all duration-200"
+    >
 
         {{-- Logo --}}
         <div class="px-5 py-5 border-b border-slate-100">
@@ -205,7 +210,18 @@
 
         {{-- Top bar --}}
         <header class="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-20">
-            <h1 class="text-lg font-semibold text-slate-900">{{ $title ?? 'MAD Tracker' }}</h1>
+            <div class="flex items-center gap-3">
+                <button
+                    @click="sidebarOpen = !sidebarOpen"
+                    class="relative w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors flex-shrink-0"
+                    title="Afficher/masquer le menu"
+                >
+                    <svg class="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+                <h1 class="text-lg font-semibold text-slate-900">{{ $title ?? 'MAD Tracker' }}</h1>
+            </div>
             <div class="flex items-center gap-3">
                 <span class="text-sm text-slate-400">{{ now()->format('d/m/Y') }}</span>
 

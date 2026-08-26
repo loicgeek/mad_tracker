@@ -17,6 +17,7 @@ class DossierIndex extends Component
     public string $search            = '';
     public string $filterStatut      = '';
     public string $filterClient      = '';
+    public string $filterFournisseur = '';
     public string $filterResponsable = '';
     public string $filterIncoterm    = '';
     public string $filterAlertes     = '';
@@ -29,6 +30,7 @@ class DossierIndex extends Component
         'search'            => ['except' => ''],
         'filterStatut'      => ['except' => ''],
         'filterClient'      => ['except' => ''],
+        'filterFournisseur' => ['except' => ''],
         'filterResponsable' => ['except' => ''],
         'filterIncoterm'    => ['except' => ''],
         'filterAlertes'     => ['except' => ''],
@@ -77,6 +79,7 @@ class DossierIndex extends Component
             }))
             ->when($this->filterStatut,      fn($q) => $q->where('statut', $this->filterStatut))
             ->when($this->filterClient,      fn($q) => $q->where('client_id', $this->filterClient))
+            ->when($this->filterFournisseur, fn($q) => $q->where('fournisseur_id', $this->filterFournisseur))
             ->when($this->filterResponsable, fn($q) => $q->where('user_id', $this->filterResponsable))
             ->when($this->filterIncoterm,    fn($q) => $q->where('incoterm', $this->filterIncoterm))
             ->when($this->filterAlertes === 'oui', fn($q) => $q->withAlertes())

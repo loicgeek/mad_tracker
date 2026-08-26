@@ -51,7 +51,7 @@ class Dossier extends Model
      * Les alertes ne s'appliquent qu'aux dossiers créés à partir de cette date
      * (demande client explicite : pas de bruit rétroactif sur l'historique repris).
      */
-    public const ALERTES_CUTOFF = '2026-09-01';
+    public const ALERTES_CUTOFF = '2026-08-17';
 
     // ── Relations ──────────────────────────────────────────────────
 
@@ -178,6 +178,21 @@ class Dossier extends Model
         };
     }
 
+    public function getAlertLabelsAttribute(): array
+    {
+        return array_filter([
+            $this->alerte_retard_mad          ? 'MAD en retard' : null,
+            $this->alerte_facture_manquante   ? 'Facture manquante' : null,
+            $this->alerte_transitaire_manquant? 'Transitaire manquant' : null,
+            $this->alerte_livraison_depassee  ? 'Livraison dépassée' : null,
+            $this->alerte_pod_manquante       ? 'POD manquante' : null,
+            $this->alerte_mad_reelle_manquante           ? 'MAD réelle manquante' : null,
+            $this->alerte_validation_documents_manquante ? 'Validation documents manquante' : null,
+            $this->alerte_co_coc_manquant                ? 'CO/COC manquant' : null,
+            $this->alerte_transitaire_infos_manquantes   ? 'Infos transitaire manquantes' : null,
+        ]);
+    }
+
     public function getHasAlerteAttribute(): bool
     {
         return $this->alerte_retard_mad
@@ -200,6 +215,8 @@ class Dossier extends Model
             'CPT'             => 'CPT',
             'CFR'             => 'CFR',
             'EXW'             => 'EXW',
+            'FOB'             => 'FOB',
+            'CIF'             => 'CIF',
             'AUTRES'          => 'Autres',
             default           => $this->incoterm,
         };
@@ -317,7 +334,8 @@ class Dossier extends Model
         $this->refreshAlertes();
 
         if ($this->statut !== $ancienStatut && $this->user) {
-            \App\Support\SafeNotifier::send($this->user, new \App\Notifications\DossierStatutChanged(
+            $notifiable = $this->user;
+            $notification = new \App\Notifications\DossierStatutChanged(
                 dossierId:          $this->id,
                 reference:          $this->reference_affaire,
                 clientNom:          $this->client?->nom ?? '—',
@@ -325,7 +343,8 @@ class Dossier extends Model
                 nouveauStatut:      $this->statut,
                 nouveauStatutLabel: $this->statut_label,
                 actionSuggeree:     $this->action_suggeree,
-            ));
+            );
+            defer(fn() => \App\Support\SafeNotifier::send($notifiable, $notification));
         }
 
         // Mail DG lorsque POD (4b) est renseignée pour la première fois
@@ -333,15 +352,14 @@ class Dossier extends Model
         if ($clot && $clot->pod_recue && $this->statut === 'finalise' && $ancienStatut !== 'finalise') {
             $dgEmail = \App\Models\Setting::get('dg_email');
             if ($dgEmail) {
-                \App\Support\SafeNotifier::send(
-                    \Illuminate\Support\Facades\Notification::route('mail', $dgEmail),
-                    new \App\Notifications\PodRecueDG(
-                        dossierId: $this->id,
-                        reference: $this->reference_affaire,
-                        clientNom: $this->client?->nom ?? '—',
-                        datePod:   $clot->date_pod?->format('d/m/Y') ?? '—',
-                    )
+                $notifiable = \Illuminate\Support\Facades\Notification::route('mail', $dgEmail);
+                $notification = new \App\Notifications\PodRecueDG(
+                    dossierId: $this->id,
+                    reference: $this->reference_affaire,
+                    clientNom: $this->client?->nom ?? '—',
+                    datePod:   $clot->date_pod?->format('d/m/Y') ?? '—',
                 );
+                defer(fn() => \App\Support\SafeNotifier::send($notifiable, $notification));
             }
         }
     }

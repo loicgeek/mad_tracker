@@ -143,6 +143,8 @@ class DossiersImport implements ToCollection, WithHeadingRow, SkipsOnError, With
             $incotermRaw === 'CPT'               => 'CPT',
             $incotermRaw === 'CFR'               => 'CFR',
             $incotermRaw === 'EXW'               => 'EXW',
+            $incotermRaw === 'FOB'               => 'FOB',
+            $incotermRaw === 'CIF'               => 'CIF',
             default                              => 'AUTRES',
         };
 
@@ -212,7 +214,7 @@ class DossiersImport implements ToCollection, WithHeadingRow, SkipsOnError, With
 
         // ── Étape 2 — Facturation ────────────────────────────────────
         $devise = strtoupper(trim((string) ($this->col($row, 'fact_devise', 'devise') ?? 'EUR')));
-        $devise = in_array($devise, ['EUR', 'USD', 'XAF', 'GBP']) ? $devise : 'EUR';
+        $devise = in_array($devise, ['EUR', 'USD', 'XAF', 'GBP', 'AED']) ? $devise : 'EUR';
 
         $dossier->etapeFacturation()->updateOrCreate(
             ['dossier_id' => $dossier->id],

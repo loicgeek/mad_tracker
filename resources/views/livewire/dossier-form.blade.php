@@ -256,6 +256,8 @@
                             <option value="CPT">CPT</option>
                             <option value="CFR">CFR</option>
                             <option value="EXW">EXW</option>
+                            <option value="FOB">FOB</option>
+                            <option value="CIF">CIF</option>
                             <option value="AUTRES">Autres</option>
                         </select>
                         @error('incoterm') <p class="form-error">{{ $message }}</p> @enderror
@@ -411,6 +413,7 @@
                             <option value="USD">USD $</option>
                             <option value="XAF">XAF FCFA</option>
                             <option value="GBP">GBP £</option>
+                            <option value="AED">AED د.إ</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -425,6 +428,7 @@
                             <option value="USD">USD $</option>
                             <option value="XAF">XAF FCFA</option>
                             <option value="GBP">GBP £</option>
+                            <option value="AED">AED د.إ</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -709,11 +713,12 @@
             @if($currentStep < 5)
                 <button wire:click="nextStep" type="button" class="btn-secondary">Suivant →</button>
             @endif
-            <button wire:click="save" type="button" class="btn-primary">
+            <button wire:click="save" wire:loading.attr="disabled" wire:target="save" wire:loading.class="opacity-50 cursor-not-allowed" type="button" class="btn-primary">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                 </svg>
-                {{ $isEdit ? 'Enregistrer les modifications' : 'Créer le dossier' }}
+                <span wire:loading.remove wire:target="save">{{ $isEdit ? 'Enregistrer les modifications' : 'Créer le dossier' }}</span>
+                <span wire:loading wire:target="save">Enregistrement…</span>
             </button>
         </div>
     </div>

@@ -1,5 +1,6 @@
 <?php
 
+use App\Console\Commands\EnvoyerDigestAlertesQuotidien;
 use App\Console\Commands\VerifierEcheanceAbonnement;
 use App\Http\Middleware\EnsureAbonnementActif;
 use App\Http\Middleware\EnsureAccountActive;
@@ -27,5 +28,6 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command(VerifierEcheanceAbonnement::class)->dailyAt('06:00');
+        $schedule->command(EnvoyerDigestAlertesQuotidien::class)->dailyAt('07:00');
     })
     ->create();

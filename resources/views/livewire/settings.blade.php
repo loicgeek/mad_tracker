@@ -23,6 +23,15 @@
                 @error('dg_email') <p class="form-error">{{ $message }}</p> @enderror
                 <p class="text-xs text-slate-400 mt-1">Laisser vide pour désactiver cette notification.</p>
             </div>
+            <div class="form-group">
+                <label class="form-label">
+                    Email complémentaire — digest alertes quotidien
+                    <span class="text-xs text-slate-400 font-normal ml-1">— reçoit chaque jour un récapitulatif des dossiers avec des champs non renseignés (retards, documents manquants, etc.)</span>
+                </label>
+                <input wire:model="email_secondaire_alertes" type="email" class="form-input" placeholder="nathalie@entreprise.com">
+                @error('email_secondaire_alertes') <p class="form-error">{{ $message }}</p> @enderror
+                <p class="text-xs text-slate-400 mt-1">Laisser vide pour désactiver ce digest pour ce destinataire.</p>
+            </div>
         </div>
     </div>
 

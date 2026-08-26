@@ -9,6 +9,7 @@ class Settings extends Component
 {
     // Groupe : notifications
     public string $dg_email = '';
+    public string $email_secondaire_alertes = '';
 
     // Groupe : MAD
     public string $validation_delai_jours = '5';
@@ -24,7 +25,8 @@ class Settings extends Component
     protected function rules(): array
     {
         return [
-            'dg_email'               => 'nullable|email|max:255',
+            'dg_email'                 => 'nullable|email|max:255',
+            'email_secondaire_alertes' => 'nullable|email|max:255',
             'validation_delai_jours' => 'required|integer|min:1|max:365',
         ];
     }
@@ -50,6 +52,7 @@ class Settings extends Component
     public function mount(): void
     {
         $this->dg_email               = Setting::get('dg_email') ?? '';
+        $this->email_secondaire_alertes = Setting::get('email_secondaire_alertes') ?? '';
         $this->validation_delai_jours = Setting::get('validation_delai_jours', '5');
         $this->app_nom                = Setting::get('app_nom', 'MAD Tracker');
 
@@ -63,6 +66,7 @@ class Settings extends Component
         $this->validate();
 
         Setting::set('dg_email',               $this->dg_email ?: null);
+        Setting::set('email_secondaire_alertes', $this->email_secondaire_alertes ?: null);
         Setting::set('validation_delai_jours', $this->validation_delai_jours);
 
         $this->dispatch('notify', type: 'success', message: 'Paramètres enregistrés.');

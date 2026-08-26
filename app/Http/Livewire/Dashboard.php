@@ -87,17 +87,7 @@ class Dashboard extends Component
                 'client'    => $d->client->nom ?? '-',
                 'statut'    => $d->statut_label,
                 'color'     => $d->statut_color,
-                'alertes'   => array_filter([
-                    $d->alerte_retard_mad          ? 'MAD en retard' : null,
-                    $d->alerte_facture_manquante   ? 'Facture manquante' : null,
-                    $d->alerte_transitaire_manquant? 'Transitaire manquant' : null,
-                    $d->alerte_livraison_depassee  ? 'Livraison dépassée' : null,
-                    $d->alerte_pod_manquante       ? 'POD manquante' : null,
-                    $d->alerte_mad_reelle_manquante           ? 'MAD réelle manquante' : null,
-                    $d->alerte_validation_documents_manquante ? 'Validation documents manquante' : null,
-                    $d->alerte_co_coc_manquant                ? 'CO/COC manquant' : null,
-                    $d->alerte_transitaire_infos_manquantes   ? 'Infos transitaire manquantes' : null,
-                ]),
+                'alertes'   => $d->alert_labels,
             ])
             ->toArray();
     }

@@ -111,7 +111,7 @@ class DossierForm extends Component
             'user_id'                     => 'required|exists:users,id',
             'client_id'                   => 'required|exists:clients,id',
             'fournisseur_id'              => 'nullable|exists:fournisseurs,id',
-            'incoterm'                    => 'required|in:FCA_USINE,FCA_TRANSITAIRE,CPT,CFR,EXW,AUTRES',
+            'incoterm'                    => 'required|in:FCA_USINE,FCA_TRANSITAIRE,CPT,CFR,EXW,FOB,CIF,AUTRES',
             'type_commande'               => 'nullable|in:standard,pj_c1,pj_c2,pj_c3,c1,c2,c3',
             'date_promise_client'         => 'nullable|date',
             'transporteur_id'             => 'nullable|exists:transporteurs,id',
@@ -267,13 +267,15 @@ class DossierForm extends Component
                 $d = $this->dossier;
             } else {
                 $d = Dossier::create(array_merge($data, ['reference' => Dossier::genererReference()]));
-                // Notifier le responsable de l'attribution
+                // Notifier le responsable de l'attribution (différé après la réponse HTTP)
                 if ($d->user) {
-                    \App\Support\SafeNotifier::send($d->user, new \App\Notifications\DossierAttribue(
+                    $notifiable = $d->user;
+                    $notification = new \App\Notifications\DossierAttribue(
                         dossierId: $d->id,
                         reference: $d->reference_affaire,
                         clientNom: $d->client?->nom ?? '—',
-                    ));
+                    );
+                    defer(fn() => \App\Support\SafeNotifier::send($notifiable, $notification));
                 }
             }
 
@@ -298,14 +300,16 @@ class DossierForm extends Component
             ];
             $d->etapeMadFournisseur()->updateOrCreate(['dossier_id' => $d->id], $madData);
 
-            // Notifier si la date de validation du document vient d'être saisie
+            // Notifier si la date de validation du document vient d'être saisie (différé)
             if ($this->mad_date_validation_document && ! $prevMad && $d->user) {
-                \App\Support\SafeNotifier::send($d->user, new \App\Notifications\ValidationDocumentRecu(
+                $notifiable = $d->user;
+                $notification = new \App\Notifications\ValidationDocumentRecu(
                     dossierId:     $d->id,
                     reference:     $d->reference_affaire,
                     clientNom:     $d->client?->nom ?? '—',
                     dateReception: now()->parse($this->mad_date_validation_document)->format('d/m/Y'),
-                ));
+                );
+                defer(fn() => \App\Support\SafeNotifier::send($notifiable, $notification));
             }
 
             // Étape 2 — Facturation
