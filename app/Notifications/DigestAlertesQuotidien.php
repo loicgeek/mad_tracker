@@ -2,11 +2,15 @@
 
 namespace App\Notifications;
 
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\MailMessage;
 
-class DigestAlertesQuotidien extends Notification
+class DigestAlertesQuotidien extends Notification implements ShouldQueue
 {
+    use Queueable;
+
     /**
      * @param array<int, array{reference: string, clientNom: string, alertes: array<int, string>}> $dossiers
      */

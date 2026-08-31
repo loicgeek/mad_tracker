@@ -2,11 +2,15 @@
 
 namespace App\Notifications;
 
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\MailMessage;
 
-class DossierStatutChanged extends Notification
+class DossierStatutChanged extends Notification implements ShouldQueue
 {
+    use Queueable;
+
     public function __construct(
         public readonly int    $dossierId,
         public readonly string $reference,

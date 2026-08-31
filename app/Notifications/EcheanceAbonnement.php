@@ -2,6 +2,8 @@
 
 namespace App\Notifications;
 
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\MailMessage;
 
@@ -10,8 +12,10 @@ use Illuminate\Notifications\Messages\MailMessage;
  * instance), pas d'un compte utilisateur individuel — envoyée uniquement
  * aux super_admin (les seuls à gérer la facturation).
  */
-class EcheanceAbonnement extends Notification
+class EcheanceAbonnement extends Notification implements ShouldQueue
 {
+    use Queueable;
+
     public function __construct(
         public readonly string $etat, // 'rappel' | 'expire'
         public readonly string $dateEcheance,

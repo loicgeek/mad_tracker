@@ -267,15 +267,13 @@ class DossierForm extends Component
                 $d = $this->dossier;
             } else {
                 $d = Dossier::create(array_merge($data, ['reference' => Dossier::genererReference()]));
-                // Notifier le responsable de l'attribution (différé après la réponse HTTP)
+                // Notifier le responsable de l'attribution
                 if ($d->user) {
-                    $notifiable = $d->user;
-                    $notification = new \App\Notifications\DossierAttribue(
+                    \App\Support\SafeNotifier::send($d->user, new \App\Notifications\DossierAttribue(
                         dossierId: $d->id,
                         reference: $d->reference_affaire,
                         clientNom: $d->client?->nom ?? '—',
-                    );
-                    defer(fn() => \App\Support\SafeNotifier::send($notifiable, $notification));
+                    ));
                 }
             }
 
@@ -300,16 +298,14 @@ class DossierForm extends Component
             ];
             $d->etapeMadFournisseur()->updateOrCreate(['dossier_id' => $d->id], $madData);
 
-            // Notifier si la date de validation du document vient d'être saisie (différé)
+            // Notifier si la date de validation du document vient d'être saisie
             if ($this->mad_date_validation_document && ! $prevMad && $d->user) {
-                $notifiable = $d->user;
-                $notification = new \App\Notifications\ValidationDocumentRecu(
+                \App\Support\SafeNotifier::send($d->user, new \App\Notifications\ValidationDocumentRecu(
                     dossierId:     $d->id,
                     reference:     $d->reference_affaire,
                     clientNom:     $d->client?->nom ?? '—',
                     dateReception: now()->parse($this->mad_date_validation_document)->format('d/m/Y'),
-                );
-                defer(fn() => \App\Support\SafeNotifier::send($notifiable, $notification));
+                ));
             }
 
             // Étape 2 — Facturation
