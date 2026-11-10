@@ -27,11 +27,35 @@
     </div>
 
     @if($totalAlertes > 0)
-    <div class="alert alert-warning">
-        <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-        </svg>
-        <span><strong>{{ $totalAlertes }} dossier(s)</strong> nécessitent une attention.</span>
+    <div class="alert alert-warning flex-col sm:flex-row sm:items-center">
+        <div class="flex items-start gap-3 flex-1 min-w-0">
+            <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <div class="min-w-0">
+                <button type="button" wire:click="$set('filterAlertes', 'oui')"
+                        class="font-semibold text-amber-900 hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 rounded">
+                    {{ $totalAlertes }} dossier(s) en alerte — afficher la liste
+                </button>
+                <div class="flex flex-wrap gap-1.5 mt-2">
+                    @foreach($alertesParType as $slug => $t)
+                        <button type="button" wire:click="$set('filterAlertes', '{{ $slug }}')"
+                                @class([
+                                    'badge transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400',
+                                    'badge-red ring-2 ring-red-300' => $filterAlertes === $slug,
+                                    'bg-white text-amber-900 border border-amber-200 hover:bg-amber-100' => $filterAlertes !== $slug,
+                                ])>
+                            {{ $t['label'] }} · {{ $t['count'] }}
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+        @if($filterAlertes !== '')
+            <button type="button" wire:click="$set('filterAlertes', '')" class="btn-secondary btn-sm flex-shrink-0">
+                Retirer le filtre alertes
+            </button>
+        @endif
     </div>
     @endif
 
@@ -70,6 +94,7 @@
                 </div>
                 <select wire:model.live="filterStatut" class="form-select">
                     <option value="">Tous les statuts</option>
+                    <option value="en_cours">En cours (non finalisés)</option>
                     <option value="en_attente">En attente</option>
                     <option value="mad_fournisseur">MAD Fournisseur</option>
                     <option value="facture">Facturé</option>
@@ -96,8 +121,11 @@
                     <option value="projet">Projet</option>
                 </select>
                 <select wire:model.live="filterAlertes" class="form-select">
-                    <option value="">Toutes</option>
+                    <option value="">Toutes (alertes ou non)</option>
                     <option value="oui">Avec alertes ⚠️</option>
+                    @foreach(\App\Models\Dossier::ALERTES as $def)
+                        <option value="{{ $def['slug'] }}">⚠️ {{ $def['label'] }}</option>
+                    @endforeach
                 </select>
             </div>
         </div>
@@ -171,8 +199,8 @@
                 <tr @class(['bg-red-50/40' => $d->has_alerte])>
                     <td>
                         <span class="font-mono text-xs font-semibold text-brand-700">{{ $d->reference_affaire }}</span>
-                        @if($d->numero_facture)
-                            <br><span class="text-xs text-slate-400">{{ $d->numero_facture }}</span>
+                        @if($d->numero_facture_affiche)
+                            <br><span class="text-xs text-slate-400" title="N° de facture">{{ $d->numero_facture_affiche }}</span>
                         @endif
                     </td>
                     <td>
@@ -224,7 +252,13 @@
 
                     <td>
                         @if($d->has_alerte)
-                            <span class="text-amber-500" title="Alertes actives">⚠️</span>
+                            <a href="{{ $d->url_alerte }}"
+                               class="group inline-flex flex-col gap-0.5 max-w-[11rem] rounded-md -m-1 p-1 hover:bg-red-100/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+                               title="Ouvrir le dossier à l'étape en alerte">
+                                @foreach($d->alertes_actives as $alerte)
+                                    <span class="text-[11px] leading-tight text-red-700 group-hover:underline">⚠️ {{ $alerte['label'] }}</span>
+                                @endforeach
+                            </a>
                         @endif
                     </td>
                     <td>

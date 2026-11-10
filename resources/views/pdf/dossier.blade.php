@@ -27,7 +27,7 @@
     <tr>
         <td>
             <h1>{{ $dossier->reference_affaire }}</h1>
-            <p style="color:#64748b;margin:0">{{ $dossier->reference }} — {{ $dossier->numero_facture }}</p>
+            <p style="color:#64748b;margin:0">{{ $dossier->reference }}@if($dossier->numero_facture_affiche) — Facture {{ $dossier->numero_facture_affiche }}@endif</p>
         </td>
         <td align="right">
             <span class="badge badge-blue">{{ $dossier->statut_label }}</span>
@@ -82,7 +82,6 @@
     <h3>Étape 4 — Livraison {{ $liv->complete ? '✓' : '…' }}</h3>
     <p>Prévue : {{ $liv->date_livraison_prevue?->format('d/m/Y') ?: '—' }} | Réelle : {{ $liv->date_livraison_reelle?->format('d/m/Y') ?: '—' }}</p>
     @if(!is_null($liv->ecart_jours))<p>Écart : {{ $liv->ecart_jours }}j</p>@endif
-    @if($liv->type_doc_transport || $liv->awb_bl_numero)<p>Doc transport : {{ $liv->type_doc_transport ? $liv->type_doc_transport.' ' : '' }}{{ $liv->awb_bl_numero }}</p>@endif
 </div>
 @endif
 

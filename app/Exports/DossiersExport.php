@@ -78,7 +78,7 @@ class DossiersExport implements FromQuery, WithHeadings, WithMapping, WithStyles
             $d->reference,
             $d->type_commande,
             $d->user?->initiales,
-            $d->numero_facture,
+            $d->numero_facture_affiche,
             $d->reference_affaire,
             $d->client?->nom,
             $d->pays_destination,

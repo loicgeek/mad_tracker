@@ -7,11 +7,12 @@ class EtapeTransitaire extends Model
 {
     protected $table = 'etape_transitaires';
     protected $fillable = [
-        'dossier_id', 'transitaire_communique',
+        'dossier_id', 'transitaire_communique', 'date_infos_client',
         'date_reception_infos_transitaire', 'date_instructions_envoyees',
         'date_enlevement', 'temps_traitement_jours', 'observations', 'complete',
     ];
     protected $casts = [
+        'date_infos_client'                => 'date',
         'date_reception_infos_transitaire' => 'date',
         'date_instructions_envoyees'       => 'date',
         'date_enlevement'                  => 'date',

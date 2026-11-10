@@ -43,6 +43,8 @@ class DossierIndex extends Component
     public function updatingFilterStatut(): void  { $this->resetPage(); }
     public function updatingFilterClient(): void  { $this->resetPage(); }
     public function updatingFilterType(): void    { $this->resetPage(); }
+    public function updatingFilterAlertes(): void { $this->resetPage(); }
+    public function updatingFilterResponsable(): void { $this->resetPage(); }
 
     public function sortBy(string $field): void
     {
@@ -55,6 +57,24 @@ class DossierIndex extends Component
         $dossier = Dossier::findOrFail($id);
         $dossier->delete();
         $this->dispatch('notify', type: 'success', message: 'Dossier supprimé.');
+    }
+
+    /** @return array<string, array{label: string, count: int}> slug → compteur */
+    private function compterAlertesParType(): array
+    {
+        $selects = collect(array_keys(Dossier::ALERTES))
+            ->map(fn ($col) => "SUM({$col} = 1) as {$col}")
+            ->implode(', ');
+        $row = Dossier::query()->selectRaw($selects)->first();
+
+        $out = [];
+        foreach (Dossier::ALERTES as $col => $def) {
+            $n = (int) ($row?->getRawOriginal($col) ?? 0);
+            if ($n > 0) {
+                $out[$def['slug']] = ['label' => $def['label'], 'count' => $n];
+            }
+        }
+        return $out;
     }
 
     public function render()
@@ -74,15 +94,17 @@ class DossierIndex extends Component
                 $q->where('reference', 'like', "%{$this->search}%")
                   ->orWhere('reference_affaire', 'like', "%{$this->search}%")
                   ->orWhere('numero_facture', 'like', "%{$this->search}%")
+                  ->orWhereHas('etapeFacturation', fn($q) => $q->where('numero_facture', 'like', "%{$this->search}%"))
                   ->orWhereHas('client', fn($q) => $q->where('nom', 'like', "%{$this->search}%"))
                   ->orWhereHas('fournisseur', fn($q) => $q->where('nom', 'like', "%{$this->search}%"));
             }))
-            ->when($this->filterStatut,      fn($q) => $q->where('statut', $this->filterStatut))
+            ->when($this->filterStatut === 'en_cours', fn($q) => $q->enCours())
+            ->when($this->filterStatut && $this->filterStatut !== 'en_cours', fn($q) => $q->where('statut', $this->filterStatut))
             ->when($this->filterClient,      fn($q) => $q->where('client_id', $this->filterClient))
             ->when($this->filterFournisseur, fn($q) => $q->where('fournisseur_id', $this->filterFournisseur))
             ->when($this->filterResponsable, fn($q) => $q->where('user_id', $this->filterResponsable))
             ->when($this->filterIncoterm,    fn($q) => $q->where('incoterm', $this->filterIncoterm))
-            ->when($this->filterAlertes === 'oui', fn($q) => $q->withAlertes())
+            ->when($this->filterAlertes !== '', fn($q) => $q->withAlerte($this->filterAlertes))
             ->when($this->filterType, fn($q) => $q->where('type_commande', $this->filterType))
             ->orderBy($this->sortField, $this->sortDirection);
 
@@ -91,6 +113,7 @@ class DossierIndex extends Component
             'clients'      => Client::orderBy('nom')->get(),
             'responsables' => User::orderBy('nom')->get(),
             'totalAlertes' => Dossier::withAlertes()->count(),
+            'alertesParType' => $this->compterAlertesParType(),
         ])->layout('layouts.app', ['title' => 'Dossiers']);
     }
 }

@@ -12,7 +12,7 @@ class DigestAlertesQuotidien extends Notification implements ShouldQueue
     use Queueable;
 
     /**
-     * @param array<int, array{reference: string, clientNom: string, alertes: array<int, string>}> $dossiers
+     * @param array<int, array{reference: string, clientNom: string, url?: string, alertes: array<int, string>}> $dossiers
      */
     public function __construct(
         public readonly array $dossiers,
@@ -28,14 +28,15 @@ class DigestAlertesQuotidien extends Notification implements ShouldQueue
         $count = count($this->dossiers);
 
         $mail = (new MailMessage)
-            ->subject("Récapitulatif quotidien — {$count} dossier(s) en alerte")
-            ->greeting("Bonjour,")
-            ->line("Voici les dossiers avec au moins un champ non renseigné ou en retard :");
+            ->subject("Alertes du jour — {$count} dossier(s) à traiter")
+            ->greeting('Bonjour,')
+            ->line("{$count} dossier(s) ont un délai dépassé. Cliquez sur une référence pour ouvrir le dossier à l'étape concernée :");
 
         foreach ($this->dossiers as $d) {
-            $mail->line("**{$d['reference']}** ({$d['clientNom']}) — " . implode(', ', $d['alertes']));
+            $ref = isset($d['url']) ? "[{$d['reference']}]({$d['url']})" : "**{$d['reference']}**";
+            $mail->line("{$ref} ({$d['clientNom']}) : " . implode(', ', $d['alertes']));
         }
 
-        return $mail->action('Voir les dossiers en alerte', route('dossiers.index', ['filterAlertes' => 'oui']));
+        return $mail->action('Voir tous les dossiers en alerte', route('dossiers.index', ['filterAlertes' => 'oui']));
     }
 }

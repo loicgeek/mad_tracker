@@ -53,6 +53,66 @@ class Dossier extends Model
      */
     public const ALERTES_CUTOFF = '2026-08-17';
 
+    /**
+     * Alertes actives (demande client du 10/11/2026). Une seule source de vérité
+     * pour les libellés, le filtre de la liste, l'ancre de l'étape concernée
+     * et le mail quotidien.
+     *
+     *   slug    → valeur du filtre ?filterAlertes= sur la liste des dossiers
+     *   etape   → ancre de l'étape sur la fiche dossier (#etape-…)
+     */
+    public const ALERTES = [
+        'alerte_validation_documents_manquante' => [
+            'slug'   => 'validation',
+            'etape'  => 'mad',
+            'label'  => 'Validation documents en attente',
+            'detail' => 'Plus de 3 jours (délai par défaut) depuis la demande de validation aux commerciaux, « Date validation document » vide.',
+        ],
+        'alerte_co_coc_manquant' => [
+            'slug'   => 'coc-coo',
+            'etape'  => 'facturation',
+            'label'  => 'COC / COO non reçu',
+            'detail' => 'Facturé depuis 3 jours ou plus, COC et/ou COO pas encore reçu.',
+        ],
+        'alerte_transitaire_infos_manquantes' => [
+            'slug'   => 'transitaire',
+            'etape'  => 'transitaire',
+            'label'  => 'Infos transitaire non reçues',
+            'detail' => 'Infos reçues du client depuis 3 jours ou plus, « Date réception infos transitaire » vide.',
+        ],
+        'alerte_livraison_depassee' => [
+            'slug'   => 'livraison',
+            'etape'  => 'livraison',
+            'label'  => 'Date de livraison réelle manquante',
+            'detail' => 'Date de livraison prévue dépassée de 2 jours ou plus, « Date livraison réelle » vide.',
+        ],
+        'alerte_pod_manquante' => [
+            'slug'   => 'pod',
+            'etape'  => 'cloture',
+            'label'  => 'Date POD manquante',
+            'detail' => 'Livré depuis 4 jours ou plus, « Date POD » vide.',
+        ],
+    ];
+
+    /** Délais (en jours) des alertes, tels que demandés par le client. */
+    public const DELAI_COC_COO          = 3;
+    public const DELAI_VALIDATION_DEFAUT = 3;
+    public const DELAI_INFOS_TRANSITAIRE = 3;
+    public const DELAI_LIVRAISON_REELLE  = 2;
+    public const DELAI_POD               = 4;
+
+    /**
+     * Anciennes alertes que le client n'a pas redemandées : colonnes conservées
+     * (historique, rollback facile) mais toujours remises à false.
+     */
+    public const ALERTES_RETIREES = [
+        'alerte_retard_mad',
+        'alerte_facture_manquante',
+        'alerte_transitaire_manquant',
+        'alerte_cout_reel_manquant',
+        'alerte_mad_reelle_manquante',
+    ];
+
     // ── Relations ──────────────────────────────────────────────────
 
     public function user(): BelongsTo
@@ -178,33 +238,41 @@ class Dossier extends Model
         };
     }
 
+    /**
+     * Alertes levées sur ce dossier, dans l'ordre des étapes.
+     *
+     * @return array<string, array{slug: string, etape: string, label: string, detail: string}>
+     */
+    public function getAlertesActivesAttribute(): array
+    {
+        return array_filter(self::ALERTES, fn ($_, string $col) => (bool) $this->{$col}, ARRAY_FILTER_USE_BOTH);
+    }
+
     public function getAlertLabelsAttribute(): array
     {
-        return array_filter([
-            $this->alerte_retard_mad          ? 'MAD en retard' : null,
-            $this->alerte_facture_manquante   ? 'Facture manquante' : null,
-            $this->alerte_transitaire_manquant? 'Transitaire manquant' : null,
-            $this->alerte_livraison_depassee  ? 'Livraison dépassée' : null,
-            $this->alerte_pod_manquante       ? 'POD manquante' : null,
-            $this->alerte_mad_reelle_manquante           ? 'MAD réelle manquante' : null,
-            $this->alerte_validation_documents_manquante ? 'Validation documents manquante' : null,
-            $this->alerte_co_coc_manquant                ? 'CO/COC manquant' : null,
-            $this->alerte_transitaire_infos_manquantes   ? 'Infos transitaire manquantes' : null,
-        ]);
+        return array_values(array_column($this->alertes_actives, 'label'));
     }
 
     public function getHasAlerteAttribute(): bool
     {
-        return $this->alerte_retard_mad
-            || $this->alerte_facture_manquante
-            || $this->alerte_transitaire_manquant
-            || $this->alerte_pod_manquante
-            || $this->alerte_livraison_depassee
-            || $this->alerte_cout_reel_manquant
-            || $this->alerte_mad_reelle_manquante
-            || $this->alerte_validation_documents_manquante
-            || $this->alerte_co_coc_manquant
-            || $this->alerte_transitaire_infos_manquantes;
+        return $this->alertes_actives !== [];
+    }
+
+    /** Lien vers la fiche, positionné sur l'étape de la première alerte. */
+    public function getUrlAlerteAttribute(): string
+    {
+        $premiere = array_values($this->alertes_actives)[0] ?? null;
+
+        return route('dossiers.show', $this->id) . ($premiere ? '#etape-' . $premiere['etape'] : '');
+    }
+
+    /**
+     * N° de facture à afficher : celui saisi à l'étape 2 (Facturation), sinon
+     * celui de l'en-tête dossier (seul renseigné sur les affaires importées).
+     */
+    public function getNumeroFactureAfficheAttribute(): ?string
+    {
+        return $this->etapeFacturation?->numero_facture ?: ($this->numero_facture ?: null);
     }
 
     public function getIncotermLabelAttribute(): string
@@ -226,87 +294,75 @@ class Dossier extends Model
 
     public function refreshAlertes(): void
     {
-        // Pas de bruit sur l'historique repris : les alertes (toutes, existantes
-        // et nouvelles) ne s'appliquent qu'aux dossiers créés à partir du cutoff.
-        if (! $this->created_at || $this->created_at->lt(self::ALERTES_CUTOFF)) {
-            $this->alerte_retard_mad = false;
-            $this->alerte_facture_manquante = false;
-            $this->alerte_transitaire_manquant = false;
-            $this->alerte_pod_manquante = false;
-            $this->alerte_livraison_depassee = false;
-            $this->alerte_cout_reel_manquant = false;
-            $this->alerte_mad_reelle_manquante = false;
-            $this->alerte_validation_documents_manquante = false;
-            $this->alerte_co_coc_manquant = false;
-            $this->alerte_transitaire_infos_manquantes = false;
-            $this->saveQuietly();
-            return;
+        foreach (self::ALERTES_RETIREES as $col) {
+            $this->{$col} = false;
         }
 
-        $today = now()->toDateString();
-
-        $mad  = $this->etapeMadFournisseur;
-        $fact = $this->etapeFacturation;
-        $trans= $this->etapeTransitaire;
-        $liv  = $this->etapeLivraison;
-        $clot = $this->etapeCloture;
-
-        $this->alerte_retard_mad = $mad
-            && $mad->date_mad_prevue
-            && ! $mad->date_mad_reelle
-            && $mad->date_mad_prevue < $today;
-
-        $this->alerte_facture_manquante = $mad
-            && $mad->complete
-            && $fact
-            && ! $fact->facture_emise;
-
-        // Transitaire manquant = facture émise mais pas de transporteur renseigné
-        $this->alerte_transitaire_manquant = $fact
-            && $fact->facture_emise
-            && ! $this->transporteur_id;
-
-        $this->alerte_livraison_depassee = $liv
-            && $liv->date_livraison_prevue
-            && ! $liv->date_livraison_reelle
-            && $liv->date_livraison_prevue < $today;
-
-        // POD manquante : toujours vide 5 jours après la date de livraison réelle
-        $this->alerte_pod_manquante = $liv
-            && $liv->date_livraison_reelle
-            && (! $clot || ! $clot->pod_recue)
-            && $liv->date_livraison_reelle->copy()->addDays(5)->isPast();
-
-        // Coût réel manquant = transporteur renseigné mais coût réel absent
-        $this->alerte_cout_reel_manquant = $this->transporteur_id
-            && (! $this->cout_reel || $this->cout_reel == 0);
-
-        // MAD réelle manquante : toujours vide 2 jours après la date MAD fournisseur
-        $this->alerte_mad_reelle_manquante = $mad
-            && $mad->date_mad_fournisseur
-            && ! $mad->date_mad_reelle
-            && $mad->date_mad_fournisseur->copy()->addDays(2)->isPast();
-
-        // Validation documents : document pas validé, délai attendu dépassé
-        // depuis la date de demande de validation aux commerciaux.
-        $this->alerte_validation_documents_manquante = $mad
-            && $mad->date_demande_validation
-            && ! $mad->date_validation_document
-            && $mad->date_demande_validation->copy()->addDays($mad->delai_validation_jours ?? 5)->isPast();
-
-        // CO/COC reçu : pas les deux cases cochées, 2 jours après la date de facture
-        $this->alerte_co_coc_manquant = $fact
-            && $fact->date_facturation
-            && ! ($fact->co_recu && $fact->coc_recu)
-            && $fact->date_facturation->copy()->addDays(2)->isPast();
-
-        // Infos transitaire : toujours vide 5 jours après la date de facturation
-        $this->alerte_transitaire_infos_manquantes = $fact
-            && $fact->date_facturation
-            && (! $trans || ! $trans->date_reception_infos_transitaire)
-            && $fact->date_facturation->copy()->addDays(5)->isPast();
+        $levees = $this->calculerAlertes();
+        foreach (array_keys(self::ALERTES) as $col) {
+            $this->{$col} = $levees[$col] ?? false;
+        }
 
         $this->saveQuietly();
+    }
+
+    /**
+     * @return array<string, bool> colonne d'alerte → levée ou non
+     */
+    private function calculerAlertes(): array
+    {
+        // Pas de bruit sur l'historique repris : les alertes ne s'appliquent
+        // qu'aux dossiers créés à partir du cutoff.
+        if (! $this->created_at || $this->created_at->lt(self::ALERTES_CUTOFF)) {
+            return [];
+        }
+
+        // Un dossier finalisé n'a plus d'action en attente : jamais d'alerte.
+        if ($this->statut === 'finalise' || $this->etapeCloture?->complete) {
+            return [];
+        }
+
+        $today = today();
+        // Vrai à partir du jour « date + N jours » (ex. facturé le 10, N = 3 → alerte le 13).
+        $echu = fn ($date, int $jours) => $date && $today->gte($date->copy()->startOfDay()->addDays($jours));
+
+        $mad   = $this->etapeMadFournisseur;
+        $fact  = $this->etapeFacturation;
+        $trans = $this->etapeTransitaire;
+        $liv   = $this->etapeLivraison;
+        $clot  = $this->etapeCloture;
+
+        return [
+            // Étape 1 — Validation des documents : plus de N jours (3 par défaut)
+            // entre la demande aux commerciaux et la validation.
+            'alerte_validation_documents_manquante' => $mad
+                && ! $mad->date_validation_document
+                && $echu($mad->date_demande_validation, ($mad->delai_validation_jours ?: self::DELAI_VALIDATION_DEFAUT) + 1),
+
+            // Étape 2 — Facturation : 3 jours après la date de facturation,
+            // COC et COO pas tous les deux reçus.
+            'alerte_co_coc_manquant' => $fact
+                && ! ($fact->co_recu && $fact->coc_recu)
+                && $echu($fact->date_facturation, self::DELAI_COC_COO),
+
+            // Étape 3 — Coordination transitaire : « Date réception infos
+            // transitaire » vide 3 jours après les infos reçues du client.
+            'alerte_transitaire_infos_manquantes' => $trans
+                && ! $trans->date_reception_infos_transitaire
+                && $echu($trans->date_infos_client, self::DELAI_INFOS_TRANSITAIRE),
+
+            // Étape 4a — Livraison client : « Date livraison réelle » vide
+            // 2 jours après la date prévue (sauf livraison non applicable).
+            'alerte_livraison_depassee' => $liv
+                && $liv->applicable
+                && ! $liv->date_livraison_reelle
+                && $echu($liv->date_livraison_prevue, self::DELAI_LIVRAISON_REELLE),
+
+            // Étape 4b — Clôture : « Date POD » vide 4 jours après la livraison réelle.
+            'alerte_pod_manquante' => $liv
+                && ! $clot?->date_pod
+                && $echu($liv->date_livraison_reelle, self::DELAI_POD),
+        ];
     }
 
     public function recalculerStatut(): void
@@ -368,17 +424,29 @@ class Dossier extends Model
     public function scopeWithAlertes($query)
     {
         return $query->where(function ($q) {
-            $q->where('alerte_retard_mad', true)
-              ->orWhere('alerte_facture_manquante', true)
-              ->orWhere('alerte_transitaire_manquant', true)
-              ->orWhere('alerte_pod_manquante', true)
-              ->orWhere('alerte_livraison_depassee', true)
-              ->orWhere('alerte_cout_reel_manquant', true)
-              ->orWhere('alerte_mad_reelle_manquante', true)
-              ->orWhere('alerte_validation_documents_manquante', true)
-              ->orWhere('alerte_co_coc_manquant', true)
-              ->orWhere('alerte_transitaire_infos_manquantes', true);
+            foreach (array_keys(self::ALERTES) as $col) {
+                $q->orWhere($col, true);
+            }
         });
+    }
+
+    /** Filtre sur une alerte précise via son slug (cf. ALERTES). */
+    public function scopeWithAlerte($query, string $slug)
+    {
+        $col = self::colonneAlerte($slug);
+
+        return $col ? $query->where($col, true) : $query->withAlertes();
+    }
+
+    public static function colonneAlerte(string $slug): ?string
+    {
+        foreach (self::ALERTES as $col => $def) {
+            if ($def['slug'] === $slug) {
+                return $col;
+            }
+        }
+
+        return null;
     }
 
     public function scopeEnCours($query)
