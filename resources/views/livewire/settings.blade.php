@@ -25,12 +25,12 @@
             </div>
             <div class="form-group">
                 <label class="form-label">
-                    Email complémentaire — digest alertes quotidien
-                    <span class="text-xs text-slate-400 font-normal ml-1">— reçoit chaque jour un récapitulatif des dossiers avec des champs non renseignés (retards, documents manquants, etc.)</span>
+                    Destinataire du mail quotidien des alertes
+                    <span class="text-xs text-slate-400 font-normal ml-1">— reçoit chaque matin à 7 h la liste des dossiers dont un délai est dépassé (COC/COO, validation documents, infos transitaire, livraison réelle, POD)</span>
                 </label>
-                <input wire:model="email_secondaire_alertes" type="email" class="form-input" placeholder="nathalie@entreprise.com">
-                @error('email_secondaire_alertes') <p class="form-error">{{ $message }}</p> @enderror
-                <p class="text-xs text-slate-400 mt-1">Laisser vide pour désactiver ce digest pour ce destinataire.</p>
+                <input wire:model="email_alertes" type="email" class="form-input" placeholder="prenom.nom@entreprise.com">
+                @error('email_alertes') <p class="form-error">{{ $message }}</p> @enderror
+                <p class="text-xs text-slate-400 mt-1">Une seule adresse. L'équipe n'est pas destinataire : elle voit le signe ⚠️ sur les dossiers. Laisser vide pour ne plus envoyer ce mail.</p>
             </div>
         </div>
     </div>
@@ -46,7 +46,7 @@
                 <label class="form-label">Délai de validation documents par défaut (jours)</label>
                 <input wire:model="validation_delai_jours" type="number" min="1" max="365" class="form-input">
                 @error('validation_delai_jours') <p class="form-error">{{ $message }}</p> @enderror
-                <p class="text-xs text-slate-400 mt-1">Ce délai est pré-rempli sur chaque nouveau dossier mais reste modifiable.</p>
+                <p class="text-xs text-slate-400 mt-1">Pré-rempli sur chaque nouveau dossier (modifiable). Au-delà de ce délai sans date de validation, le dossier passe en alerte.</p>
             </div>
         </div>
     </div>

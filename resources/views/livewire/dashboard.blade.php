@@ -1,9 +1,16 @@
 <div class="space-y-8">
 
+    @php
+        // Liens des indicateurs. Les pages Analyses / Fournisseurs sont réservées
+        // aux admins : pour les autres rôles, l'indicateur reste non cliquable.
+        $isAdmin   = in_array(auth()->user()->role, ['super_admin', 'admin']);
+        $analyses  = $isAdmin ? route('analyses') : null;
+    @endphp
+
     {{-- ── Stats Row ──────────────────────────────────────────── --}}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-5">
 
-        <div class="stat-card">
+        <a href="{{ route('dossiers.index') }}" class="stat-card kpi-link" title="Voir tous les dossiers">
             <div>
                 <p class="stat-label">Total dossiers</p>
                 <p class="stat-value">{{ $stats['total'] }}</p>
@@ -14,9 +21,9 @@
                           d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
                 </svg>
             </div>
-        </div>
+        </a>
 
-        <div class="stat-card">
+        <a href="{{ route('dossiers.index', ['filterStatut' => 'en_cours']) }}" class="stat-card kpi-link" title="Voir les dossiers en cours">
             <div>
                 <p class="stat-label">En cours</p>
                 <p class="stat-value text-brand-700">{{ $stats['en_cours'] }}</p>
@@ -26,9 +33,9 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
             </div>
-        </div>
+        </a>
 
-        <div class="stat-card">
+        <a href="{{ route('dossiers.index', ['filterAlertes' => 'oui']) }}" class="stat-card kpi-link" title="Voir les dossiers en alerte">
             <div>
                 <p class="stat-label">Avec alertes</p>
                 <p class="stat-value text-red-600">{{ $stats['avec_alertes'] }}</p>
@@ -39,9 +46,9 @@
                           d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                 </svg>
             </div>
-        </div>
+        </a>
 
-        <div class="stat-card">
+        <a href="{{ route('dossiers.index', ['filterStatut' => 'finalise']) }}" class="stat-card kpi-link" title="Voir les dossiers finalisés">
             <div>
                 <p class="stat-label">Finalisés</p>
                 <p class="stat-value text-emerald-600">{{ $stats['finalises'] }}</p>
@@ -51,54 +58,62 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
             </div>
-        </div>
+        </a>
 
     </div>
 
     {{-- ── KPI Row ──────────────────────────────────────────────── --}}
-    <div class="grid grid-cols-3 gap-5">
-        <div class="card p-5 text-center">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <a @if($analyses) href="{{ $analyses }}" @endif class="card block p-5 text-center {{ $analyses ? 'kpi-link' : '' }}">
             <p class="text-sm text-slate-500 mb-1">Moy. temps de traitement</p>
             <p class="text-3xl font-bold text-slate-900">{{ $stats['moy_traitement'] }}<span class="text-base text-slate-400 ml-1">j</span></p>
-        </div>
-        <div class="card p-5 text-center">
+            <p class="kpi-hint">Jours entre la MAD réelle (étape 1) et l'enlèvement (étape 3), en moyenne sur {{ $stats['nb_traitement'] }} dossier(s)</p>
+        </a>
+        <a href="{{ route('dossiers.index', ['filterAlertes' => 'pod']) }}" class="card block p-5 text-center kpi-link">
             <p class="text-sm text-slate-500 mb-1">POD en attente</p>
             <p class="text-3xl font-bold text-amber-600">{{ $stats['pod_en_attente'] }}</p>
-        </div>
-        <div class="card p-5 text-center">
+            <p class="kpi-hint">Livrés depuis {{ \App\Models\Dossier::DELAI_POD }} jours ou plus sans date POD</p>
+        </a>
+        <a @if($isAdmin) href="{{ route('fournisseurs.index') }}" @endif class="card block p-5 text-center {{ $isAdmin ? 'kpi-link' : '' }}">
             <p class="text-sm text-slate-500 mb-1">Fournisseurs actifs</p>
             <p class="text-3xl font-bold text-slate-900">{{ $stats['fournisseurs'] }}</p>
-        </div>
+            <p class="kpi-hint">Fournisseurs enregistrés dans le référentiel</p>
+        </a>
     </div>
 
     {{-- ── KPI Livraisons & Coûts ───────────────────────────────── --}}
     <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div class="card p-4 text-center">
+        <a @if($analyses) href="{{ $analyses }}" @endif class="card block p-4 text-center {{ $analyses ? 'kpi-link' : '' }}">
             <p class="text-xs text-slate-500 mb-1">Livraisons à temps</p>
             <p class="text-2xl font-bold text-emerald-600">{{ $stats['taux_livraison_temps'] }}<span class="text-sm ml-0.5">%</span></p>
-        </div>
-        <div class="card p-4 text-center">
+            <p class="kpi-hint">Livraison réelle au plus tard à la date prévue</p>
+        </a>
+        <a @if($analyses) href="{{ $analyses }}" @endif class="card block p-4 text-center {{ $analyses ? 'kpi-link' : '' }}">
             <p class="text-xs text-slate-500 mb-1">Taux de retard</p>
             <p class="text-2xl font-bold text-red-500">{{ $stats['taux_retard'] }}<span class="text-sm ml-0.5">%</span></p>
-        </div>
-        <div class="card p-4 text-center">
+            <p class="kpi-hint">Livraison réelle après la date prévue, sur {{ $stats['total_livres'] }} livraison(s) avec les 2 dates</p>
+        </a>
+        <a @if($analyses) href="{{ $analyses }}" @endif class="card block p-4 text-center {{ $analyses ? 'kpi-link' : '' }}">
             <p class="text-xs text-slate-500 mb-1">Délai moyen livraison</p>
             <p class="text-2xl font-bold {{ $stats['delai_moyen_livraison'] > 0 ? 'text-red-500' : 'text-emerald-600' }}">
                 {{ $stats['delai_moyen_livraison'] }}<span class="text-sm text-slate-400 ml-1">j</span>
             </p>
-        </div>
-        <div class="card p-4 text-center">
+            <p class="kpi-hint">Écart moyen livraison réelle − prévue</p>
+        </a>
+        <a @if($analyses) href="{{ $analyses }}" @endif class="card block p-4 text-center {{ $analyses ? 'kpi-link' : '' }}">
             <p class="text-xs text-slate-500 mb-1">Écart coût total</p>
             <p class="text-2xl font-bold {{ $stats['ecart_cout_total'] > 0 ? 'text-red-500' : ($stats['ecart_cout_total'] < 0 ? 'text-emerald-600' : 'text-slate-400') }}">
                 {{ $stats['ecart_cout_total'] > 0 ? '+' : '' }}{{ number_format($stats['ecart_cout_total'], 0, '.', ' ') }}<span class="text-sm ml-0.5">€</span>
             </p>
-        </div>
-        <div class="card p-4 text-center">
+            <p class="kpi-hint">Somme coût réel − coût prévu du transport</p>
+        </a>
+        <a @if($analyses) href="{{ $analyses }}" @endif class="card block p-4 text-center {{ $analyses ? 'kpi-link' : '' }}">
             <p class="text-xs text-slate-500 mb-1">Écart coût moyen</p>
             <p class="text-2xl font-bold {{ $stats['ecart_cout_pct'] > 0 ? 'text-red-500' : ($stats['ecart_cout_pct'] < 0 ? 'text-emerald-600' : 'text-slate-400') }}">
                 {{ $stats['ecart_cout_pct'] > 0 ? '+' : '' }}{{ $stats['ecart_cout_pct'] }}<span class="text-sm ml-0.5">%</span>
             </p>
-        </div>
+            <p class="kpi-hint">Dépassement moyen du coût prévu, en %</p>
+        </a>
     </div>
 
     {{-- ── Charts ───────────────────────────────────────────────── --}}
@@ -161,7 +176,7 @@
                 <tbody>
                     @foreach($alertes as $a)
                     <tr>
-                        <td class="font-mono text-xs font-medium text-slate-700">{{ $a['reference'] }}</td>
+                        <td class="font-mono text-xs font-medium"><a href="{{ $a['url'] }}" class="text-brand-700 hover:underline">{{ $a['reference'] }}</a></td>
                         <td>{{ $a['client'] }}</td>
                         <td>
                             <span class="badge badge-{{ $a['color'] === 'green' ? 'green' : ($a['color'] === 'red' ? 'red' : 'blue') }}">
@@ -171,12 +186,12 @@
                         <td>
                             <div class="flex flex-wrap gap-1">
                                 @foreach($a['alertes'] as $alerte)
-                                    <span class="badge badge-red text-xs">{{ $alerte }}</span>
+                                    <a href="{{ $alerte['url'] }}" class="badge badge-red text-xs hover:ring-2 hover:ring-red-200 transition-shadow" title="Aller à l'étape concernée">{{ $alerte['label'] }}</a>
                                 @endforeach
                             </div>
                         </td>
                         <td>
-                            <a href="{{ route('dossiers.show', $a['id']) }}" class="btn btn-ghost btn-sm">Voir →</a>
+                            <a href="{{ $a['url'] }}" class="btn btn-ghost btn-sm">Voir →</a>
                         </td>
                     </tr>
                     @endforeach

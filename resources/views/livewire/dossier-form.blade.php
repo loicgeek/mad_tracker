@@ -76,7 +76,7 @@
                 'label'            => 'Livraison & Clôture',
                 'sublabel'         => 'Étape 4',
                 'complete'         => $liv_complete && $clot_complete,
-                'hasData'          => (bool)($liv_date_prevue || $liv_awb || $clot_pod_recue || $clot_date_pod),
+                'hasData'          => (bool)($liv_date_prevue || $liv_date_reelle || $clot_pod_recue || $clot_date_pod),
                 'bubbleActive'     => ($clot_pod_recue || $clot_date_pod || $clot_complete)
                                         ? 'bg-teal-600 border-teal-600 text-white ring-2 ring-teal-200'
                                         : 'bg-amber-500 border-amber-500 text-white ring-2 ring-amber-200',
@@ -332,7 +332,7 @@
                             @error('mad_date_demande_validation') <p class="form-error">{{ $message }}</p> @enderror
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Délai attendu (jours)</label>
+                            <label class="form-label">Délai attendu (jours) <span class="text-xs text-slate-400 font-normal">— alerte au-delà</span></label>
                             <input wire:model="mad_delai_validation_jours" type="number" min="1" max="365" class="form-input">
                             @error('mad_delai_validation_jours') <p class="form-error">{{ $message }}</p> @enderror
                         </div>
@@ -520,10 +520,20 @@
         </div>
         <div class="card-body space-y-5">
 
-            <label class="flex items-center gap-3 p-4 rounded-xl border border-yellow-200 bg-yellow-50/50 cursor-pointer hover:bg-yellow-50">
-                <input wire:model="trans_communique" type="checkbox" class="rounded {{ $current['checkAccent'] }}">
-                <span class="text-sm font-medium text-slate-700">Infos transitaire reçues du client</span>
-            </label>
+            <div class="rounded-xl border border-yellow-200 bg-yellow-50/50 p-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                <label class="flex items-center gap-3 cursor-pointer py-2">
+                    <input wire:model.live="trans_communique" type="checkbox" class="rounded {{ $current['checkAccent'] }}">
+                    <span class="text-sm font-medium text-slate-700">Infos transitaire reçues du client</span>
+                </label>
+                <div class="form-group">
+                    <label class="form-label">Reçues du client le</label>
+                    <input wire:model="trans_date_infos_client" type="date" class="form-input">
+                    @error('trans_date_infos_client') <p class="form-error">{{ $message }}</p> @enderror
+                </div>
+                <p class="md:col-span-2 text-xs text-slate-500">
+                    Alerte si « Date réception infos transitaire » est encore vide {{ \App\Models\Dossier::DELAI_INFOS_TRANSITAIRE }} jours après cette date.
+                </p>
+            </div>
 
             <div class="grid grid-cols-2 gap-5">
                 <div class="form-group">
@@ -581,31 +591,6 @@
                         <label class="form-label">Date livraison réelle</label>
                         <input wire:model="liv_date_reelle" type="date" class="form-input">
                         @error('liv_date_reelle') <p class="form-error">{{ $message }}</p> @enderror
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Mode de transport</label>
-                        <select wire:model="liv_mode_transport" class="form-select">
-                            <option value="">— Sélectionner —</option>
-                            <option value="aérien">Aérien</option>
-                            <option value="maritime">Maritime</option>
-                            <option value="routier">Routier</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Type de document de transport</label>
-                        <select wire:model="liv_type_doc_transport" class="form-select">
-                            <option value="">— Sélectionner —</option>
-                            <option value="AWB">AWB (Air Waybill)</option>
-                            <option value="BL">BL (Connaissement maritime)</option>
-                            <option value="LTA">LTA (Lettre de transport aérien)</option>
-                            <option value="CMR">CMR (Transport routier)</option>
-                            <option value="CIM">CIM (Transport ferroviaire)</option>
-                            <option value="autre">Autre</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Référence document de transport</label>
-                        <input wire:model="liv_awb" type="text" class="form-input" placeholder="N° de référence">
                     </div>
                 </div>
 

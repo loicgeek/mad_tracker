@@ -44,6 +44,8 @@ class Dashboard extends Component
                     ->avg('temps_traitement_jours') ?? 0, 1
             ),
             'pod_en_attente' => Dossier::where('alerte_pod_manquante', true)->count(),
+            'total_livres'   => $totalLivres,
+            'nb_traitement'  => DB::table('etape_transitaires')->whereNotNull('temps_traitement_jours')->count(),
             // Nouveaux KPIs
             'taux_livraison_temps' => $totalLivres > 0
                 ? round((clone $livresBase)->where('ecart_livraison_jours', '<=', 0)->count() / $totalLivres * 100, 1)
@@ -77,7 +79,7 @@ class Dashboard extends Component
     private function loadAlertes(): void
     {
         $this->alertes = Dossier::withAlertes()
-            ->with(['client', 'user', 'etapeMadFournisseur', 'etapeLivraison'])
+            ->with(['client'])
             ->orderByDesc('updated_at')
             ->limit(10)
             ->get()
@@ -87,7 +89,11 @@ class Dashboard extends Component
                 'client'    => $d->client->nom ?? '-',
                 'statut'    => $d->statut_label,
                 'color'     => $d->statut_color,
-                'alertes'   => $d->alert_labels,
+                'url'       => $d->url_alerte,
+                'alertes'   => array_values(array_map(
+                    fn ($a) => ['label' => $a['label'], 'url' => route('dossiers.show', $d->id) . '#etape-' . $a['etape']],
+                    $d->alertes_actives
+                )),
             ])
             ->toArray();
     }

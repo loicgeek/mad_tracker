@@ -46,7 +46,7 @@ class EtapeMadFournisseur extends Model
     public function getValidationEnRetardAttribute(): bool
     {
         if (! $this->date_demande_validation || $this->date_validation_document) return false;
-        $delai = $this->delai_validation_jours ?? 5;
-        return $this->date_demande_validation->copy()->addDays($delai)->isPast();
+        $delai = $this->delai_validation_jours ?: Dossier::DELAI_VALIDATION_DEFAUT;
+        return today()->gt($this->date_demande_validation->copy()->startOfDay()->addDays($delai));
     }
 }

@@ -45,7 +45,7 @@ class DossierForm extends Component
     public string $mad_nom_valideur = '';
     public string $mad_date_validation_document = '';
     public string $mad_date_demande_validation = '';
-    public int    $mad_delai_validation_jours = 5;
+    public int    $mad_delai_validation_jours = Dossier::DELAI_VALIDATION_DEFAUT;
     public string $mad_observations = '';
     public bool   $mad_complete = false;
 
@@ -81,6 +81,7 @@ class DossierForm extends Component
 
     // ── Step 3 : Transitaire ──
     public bool   $trans_communique = false;
+    public string $trans_date_infos_client = '';
     public string $trans_date_reception = '';
     public string $trans_date_instructions = '';
     public string $trans_date_enlevement = '';
@@ -130,6 +131,7 @@ class DossierForm extends Component
             'fact_montant_client'          => 'nullable|numeric',
             'fact_montant_fournisseur'     => 'nullable|numeric',
             'fact_taux_change'             => 'nullable|numeric|min:0',
+            'trans_date_infos_client'     => 'nullable|date',
             'trans_date_enlevement'       => 'nullable|date',
             'liv_date_prevue'             => 'nullable|date',
             'liv_date_reelle'             => 'nullable|date',
@@ -140,6 +142,7 @@ class DossierForm extends Component
     public function mount(int $id = 0): void
     {
         $this->user_id = Auth::id() ?? 1;
+        $this->mad_delai_validation_jours = (int) \App\Models\Setting::get('validation_delai_jours', Dossier::DELAI_VALIDATION_DEFAUT) ?: Dossier::DELAI_VALIDATION_DEFAUT;
 
         if ($id) {
             $this->dossier = Dossier::with([
@@ -183,7 +186,7 @@ class DossierForm extends Component
             $this->mad_nom_valideur              = $m->nom_valideur ?? '';
             $this->mad_date_validation_document  = $m->date_validation_document?->format('Y-m-d') ?? '';
             $this->mad_date_demande_validation   = $m->date_demande_validation?->format('Y-m-d') ?? '';
-            $this->mad_delai_validation_jours    = $m->delai_validation_jours ?? 5;
+            $this->mad_delai_validation_jours    = $m->delai_validation_jours ?: Dossier::DELAI_VALIDATION_DEFAUT;
             $this->mad_observations              = $m->observations ?? '';
             $this->mad_complete                  = $m->complete;
         }
@@ -210,6 +213,7 @@ class DossierForm extends Component
 
         if ($t = $d->etapeTransitaire) {
             $this->trans_communique        = $t->transitaire_communique;
+            $this->trans_date_infos_client = $t->date_infos_client?->format('Y-m-d') ?? '';
             $this->trans_date_reception    = $t->date_reception_infos_transitaire?->format('Y-m-d') ?? '';
             $this->trans_date_instructions = $t->date_instructions_envoyees?->format('Y-m-d') ?? '';
             $this->trans_date_enlevement   = $t->date_enlevement?->format('Y-m-d') ?? '';
@@ -292,7 +296,7 @@ class DossierForm extends Component
                 'nom_valideur'              => $this->mad_nom_valideur ?: null,
                 'date_validation_document'  => $this->mad_date_validation_document ?: null,
                 'date_demande_validation'   => $this->mad_date_demande_validation ?: null,
-                'delai_validation_jours'    => $this->mad_delai_validation_jours ?: 5,
+                'delai_validation_jours'    => $this->mad_delai_validation_jours ?: Dossier::DELAI_VALIDATION_DEFAUT,
                 'observations'              => $this->mad_observations ?: null,
                 'complete'                  => $this->mad_complete,
             ];
@@ -338,7 +342,9 @@ class DossierForm extends Component
 
             // Étape 3 — Transitaire
             $d->etapeTransitaire()->updateOrCreate(['dossier_id' => $d->id], [
-                'transitaire_communique'           => $this->trans_communique,
+                // Une date saisie vaut confirmation : la case suit la date.
+                'transitaire_communique'           => $this->trans_communique || $this->trans_date_infos_client !== '',
+                'date_infos_client'                => $this->trans_date_infos_client ?: null,
                 'date_reception_infos_transitaire' => $this->trans_date_reception ?: null,
                 'date_instructions_envoyees'       => $this->trans_date_instructions ?: null,
                 'date_enlevement'                  => $this->trans_date_enlevement ?: null,
@@ -374,6 +380,20 @@ class DossierForm extends Component
 
         $this->dispatch('notify', type: 'success', message: $this->isEdit ? 'Dossier mis à jour.' : 'Dossier créé.');
         $this->redirect(route('dossiers.index'));
+    }
+
+    /**
+     * Cocher « Infos transitaire reçues du client » pré-remplit la date du jour :
+     * c'est le point de départ de l'alerte Étape 3 (date reste modifiable).
+     */
+    public function updatedTransCommunique(bool $value): void
+    {
+        if ($value && $this->trans_date_infos_client === '') {
+            $this->trans_date_infos_client = now()->format('Y-m-d');
+        }
+        if (! $value) {
+            $this->trans_date_infos_client = '';
+        }
     }
 
     public function nextStep(): void

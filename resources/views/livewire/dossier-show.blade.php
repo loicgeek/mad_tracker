@@ -9,7 +9,7 @@
             <h2 class="text-2xl font-bold text-slate-900 font-mono">{{ $dossier->reference_affaire }}</h2>
             <p class="text-slate-500 text-sm mt-1">
                 {{ $dossier->reference }}
-                @if($dossier->etapeFacturation?->numero_facture) · {{ $dossier->etapeFacturation->numero_facture }} @endif
+                @if($dossier->numero_facture_affiche) · Facture {{ $dossier->numero_facture_affiche }} @endif
             </p>
         </div>
         <div class="flex items-center gap-3">
@@ -99,22 +99,28 @@
     </div>
     @endif
 
-    {{-- ── Alertes ──────────────────────────────────────────────── --}}
+    {{-- ── Alertes : chaque ligne mène à l'étape concernée ─────── --}}
     @if($dossier->has_alerte)
-    <div class="alert alert-warning">
-        <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div id="alertes" class="alert alert-warning scroll-mt-24">
+        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
         </svg>
-        <div class="flex flex-wrap gap-2">
-            @if($dossier->alerte_retard_mad)           <span class="badge badge-red">MAD en retard</span>@endif
-            @if($dossier->alerte_facture_manquante)    <span class="badge badge-yellow">Facture manquante</span>@endif
-            @if($dossier->alerte_transitaire_manquant) <span class="badge badge-yellow">Transitaire manquant</span>@endif
-            @if($dossier->alerte_livraison_depassee)   <span class="badge badge-red">Livraison dépassée</span>@endif
-            @if($dossier->alerte_pod_manquante)        <span class="badge badge-yellow">POD manquante</span>@endif
-            @if($dossier->alerte_mad_reelle_manquante)           <span class="badge badge-yellow">MAD réelle manquante</span>@endif
-            @if($dossier->alerte_validation_documents_manquante) <span class="badge badge-yellow">Validation documents manquante</span>@endif
-            @if($dossier->alerte_co_coc_manquant)                <span class="badge badge-yellow">CO/COC manquant</span>@endif
-            @if($dossier->alerte_transitaire_infos_manquantes)   <span class="badge badge-yellow">Infos transitaire manquantes</span>@endif
+        <div class="flex-1 min-w-0">
+            <p class="font-semibold text-amber-900 mb-2">
+                {{ count($dossier->alertes_actives) }} alerte(s) sur ce dossier — cliquez pour aller à l'étape
+            </p>
+            <ul class="space-y-1.5">
+                @foreach($dossier->alertes_actives as $alerte)
+                <li>
+                    <a href="#etape-{{ $alerte['etape'] }}"
+                       class="alert-link group">
+                        <span class="badge badge-red flex-shrink-0">{{ $alerte['label'] }}</span>
+                        <span class="text-xs text-amber-800/80 group-hover:text-amber-900">{{ $alerte['detail'] }}</span>
+                        <span class="alert-link-arrow" aria-hidden="true">→</span>
+                    </a>
+                </li>
+                @endforeach
+            </ul>
         </div>
     </div>
     @endif
@@ -216,8 +222,8 @@
                 @endphp
 
                 {{-- ══ Étape 1 — MAD Fournisseur ══════════════════ --}}
-                @php $r = $resolveDot($mad, 'mad', $dossier->alerte_retard_mad || $dossier->alerte_mad_reelle_manquante || $dossier->alerte_validation_documents_manquante); @endphp
-                <div class="flex gap-4 py-5">
+                @php $r = $resolveDot($mad, 'mad', $dossier->alerte_validation_documents_manquante); @endphp
+                <div id="etape-mad" class="etape-anchor flex gap-4 py-5">
                     {{-- Accent bar --}}
                     <div class="w-1 rounded-full self-stretch {{ $mad ? $stepConfig['mad']['accentBar'] : 'bg-slate-200' }} flex-shrink-0"></div>
                     {{-- Dot --}}
@@ -250,6 +256,11 @@
                                     @endif
                                 </p>
                             @endif
+                            @if($mad->date_demande_validation)
+                                <p>Demande de validation aux commerciaux : <strong>{{ $mad->date_demande_validation->format('d/m/Y') }}</strong>
+                                    <span class="text-slate-400">(délai {{ $mad->delai_validation_jours ?: \App\Models\Dossier::DELAI_VALIDATION_DEFAUT }} j)</span>
+                                </p>
+                            @endif
                             @if($mad->date_validation_document)
                                 <p>Validation docs : <strong>{{ $mad->date_validation_document->format('d/m/Y') }}</strong>
                                     @if(!is_null($mad->ecart_validation))
@@ -276,8 +287,8 @@
                 </div>
 
                 {{-- ══ Étape 2 — Facturation ═══════════════════════ --}}
-                @php $r = $resolveDot($fact, 'fact', $dossier->alerte_facture_manquante || $dossier->alerte_co_coc_manquant); @endphp
-                <div class="flex gap-4 py-5">
+                @php $r = $resolveDot($fact, 'fact', $dossier->alerte_co_coc_manquant); @endphp
+                <div id="etape-facturation" class="etape-anchor flex gap-4 py-5">
                     <div class="w-1 rounded-full self-stretch {{ $fact ? $stepConfig['fact']['accentBar'] : 'bg-slate-200' }} flex-shrink-0"></div>
                     <div class="flex-shrink-0 mt-0.5">
                         <span class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold {{ $r['dot'] }}">
@@ -333,8 +344,8 @@
                 </div>
 
                 {{-- ══ Étape 3 — Transitaire ═══════════════════════ --}}
-                @php $r = $resolveDot($trans, 'trans', $dossier->alerte_transitaire_manquant || $dossier->alerte_transitaire_infos_manquantes); @endphp
-                <div class="flex gap-4 py-5">
+                @php $r = $resolveDot($trans, 'trans', $dossier->alerte_transitaire_infos_manquantes); @endphp
+                <div id="etape-transitaire" class="etape-anchor flex gap-4 py-5">
                     <div class="w-1 rounded-full self-stretch {{ $trans ? $stepConfig['trans']['accentBar'] : 'bg-slate-200' }} flex-shrink-0"></div>
                     <div class="flex-shrink-0 mt-0.5">
                         <span class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold {{ $r['dot'] }}">
@@ -352,11 +363,15 @@
                         </div>
                         @if($trans)
                         <div class="text-xs text-slate-500 space-y-1.5">
-                            <p>Infos reçues :
+                            <p>Infos reçues du client :
                                 <span @class(['font-semibold', 'text-emerald-600' => $trans->transitaire_communique])>
                                     {{ $trans->transitaire_communique ? 'OUI' : 'NON' }}
                                 </span>
+                                @if($trans->date_infos_client) le <strong>{{ $trans->date_infos_client->format('d/m/Y') }}</strong> @endif
                             </p>
+                            @if($trans->date_reception_infos_transitaire)
+                                <p>Réception infos transitaire : <strong>{{ $trans->date_reception_infos_transitaire->format('d/m/Y') }}</strong></p>
+                            @endif
                             @if($trans->date_enlevement)
                                 <p>Date enlèvement : <strong>{{ $trans->date_enlevement->format('d/m/Y') }}</strong></p>
                             @endif
@@ -373,7 +388,7 @@
 
                 {{-- ══ Étape 4a — Livraison ════════════════════════ --}}
                 @php $r = $resolveDot($liv, 'liv', $dossier->alerte_livraison_depassee); @endphp
-                <div class="flex gap-4 py-5">
+                <div id="etape-livraison" class="etape-anchor flex gap-4 py-5">
                     <div class="w-1 rounded-full self-stretch {{ $liv ? $stepConfig['liv']['accentBar'] : 'bg-slate-200' }} flex-shrink-0"></div>
                     <div class="flex-shrink-0 mt-0.5">
                         <span class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold {{ $r['dot'] }}">
@@ -402,11 +417,7 @@
                                     @endif
                                 </p>
                             @endif
-                            @if($liv->type_doc_transport || $liv->awb_bl_numero)
-                                <p>Doc transport :
-                                    <strong>{{ $liv->type_doc_transport ? $liv->type_doc_transport.' ' : '' }}{{ $liv->awb_bl_numero }}</strong>
-                                </p>
-                            @endif
+                            @if($liv->motif_retard) <p>Motif de retard : <strong>{{ $liv->motif_retard }}</strong></p> @endif
                             @if($liv->observations) <p class="text-slate-600 italic">{{ $liv->observations }}</p> @endif
                         </div>
                         @else
@@ -417,7 +428,7 @@
 
                 {{-- ══ Étape 4b — Clôture (POD) ════════════════════ --}}
                 @php $r = $resolveDot($clot, 'clot', $dossier->alerte_pod_manquante); @endphp
-                <div class="flex gap-4 py-5">
+                <div id="etape-cloture" class="etape-anchor flex gap-4 py-5">
                     <div class="w-1 rounded-full self-stretch {{ $clot ? $stepConfig['clot']['accentBar'] : 'bg-slate-200' }} flex-shrink-0"></div>
                     <div class="flex-shrink-0 mt-0.5">
                         <span class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold {{ $r['dot'] }}">

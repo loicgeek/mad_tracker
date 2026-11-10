@@ -9,10 +9,10 @@ class Settings extends Component
 {
     // Groupe : notifications
     public string $dg_email = '';
-    public string $email_secondaire_alertes = '';
+    public string $email_alertes = '';
 
     // Groupe : MAD
-    public string $validation_delai_jours = '5';
+    public string $validation_delai_jours = '3';
 
     // Groupe : général
     public string $app_nom = 'MAD Tracker';
@@ -26,13 +26,14 @@ class Settings extends Component
     {
         return [
             'dg_email'                 => 'nullable|email|max:255',
-            'email_secondaire_alertes' => 'nullable|email|max:255',
+            'email_alertes'            => 'nullable|email|max:255',
             'validation_delai_jours' => 'required|integer|min:1|max:365',
         ];
     }
 
     protected $messages = [
         'dg_email.email'                    => 'L\'adresse email de la DG n\'est pas valide.',
+        'email_alertes.email'               => 'L\'adresse email du destinataire des alertes n\'est pas valide.',
         'validation_delai_jours.required'   => 'Le délai est obligatoire.',
         'validation_delai_jours.integer'    => 'Le délai doit être un nombre entier.',
         'validation_delai_jours.min'        => 'Le délai doit être d\'au moins 1 jour.',
@@ -52,8 +53,8 @@ class Settings extends Component
     public function mount(): void
     {
         $this->dg_email               = Setting::get('dg_email') ?? '';
-        $this->email_secondaire_alertes = Setting::get('email_secondaire_alertes') ?? '';
-        $this->validation_delai_jours = Setting::get('validation_delai_jours', '5');
+        $this->email_alertes          = Setting::get('email_alertes') ?? '';
+        $this->validation_delai_jours = Setting::get('validation_delai_jours', '3');
         $this->app_nom                = Setting::get('app_nom', 'MAD Tracker');
 
         $this->limite_comptes_admin  = Setting::get('limite_comptes_admin', '2');
@@ -66,7 +67,7 @@ class Settings extends Component
         $this->validate();
 
         Setting::set('dg_email',               $this->dg_email ?: null);
-        Setting::set('email_secondaire_alertes', $this->email_secondaire_alertes ?: null);
+        Setting::set('email_alertes',          $this->email_alertes ?: null);
         Setting::set('validation_delai_jours', $this->validation_delai_jours);
 
         $this->dispatch('notify', type: 'success', message: 'Paramètres enregistrés.');
